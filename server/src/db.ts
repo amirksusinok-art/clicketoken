@@ -792,4 +792,15 @@ export function equipSkin(userId: number, skinId: string, skinType: 'coin' | 'pl
   return { success: true };
 }
 
-
+export function grantSkin(userId: number, skinId: string, skinType: 'coin' | 'plane'): boolean {
+  const owned = getUserPurchasedSkins(userId);
+  if (!owned.includes(skinId)) {
+    db.prepare('INSERT INTO user_skins (user_id, skin_id, created_at) VALUES (?, ?, ?)').run(userId, skinId, Date.now());
+  }
+  if (skinType === 'coin') {
+    db.prepare('UPDATE users SET active_coin_skin = ? WHERE id = ?').run(skinId, userId);
+  } else {
+    db.prepare('UPDATE users SET active_plane_skin = ? WHERE id = ?').run(skinId, userId);
+  }
+  return true;
+}

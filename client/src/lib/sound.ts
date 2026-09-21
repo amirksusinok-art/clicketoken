@@ -54,6 +54,10 @@ class SoundManager {
     return next;
   }
 
+  public playClick() {
+    this.playCoinTap();
+  }
+
   /**
    * 1. Soft Tactile Coin Tap
    * Snappy acoustic pop with quick exponential frequency decay (540Hz -> 1080Hz)

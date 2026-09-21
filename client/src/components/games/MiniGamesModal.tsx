@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import {
   ChevronLeft,
+  ChevronRight,
   Rocket,
-  Plane,
-  Sparkles,
-  Binary,
+  Trophy,
+  Package,
   Layers,
   Swords,
   Star,
+  Binary,
+  Sparkles,
   User as UserIcon,
 } from 'lucide-react';
 import { CrashGame } from './CrashGame.js';
-import { AirplaneGame } from './AirplaneGame.js';
+import { PenaltyGame } from './PenaltyGame.js';
+import { CasesGame } from './CasesGame.js';
 import { RandomGame } from './RandomGame.js';
 import { HiLoGame } from './HiLoGame.js';
 import { PlinkoGame } from './PlinkoGame.js';
@@ -28,7 +31,7 @@ interface MiniGamesModalProps {
   onBalanceUpdate: (newBalance: number) => void;
 }
 
-type GameType = 'crash' | 'plinko' | 'wheel_pvp' | 'airplane' | 'hilo' | 'random';
+type GameType = 'crash' | 'penalty' | 'cases' | 'plinko' | 'wheel_pvp' | 'hilo' | 'random';
 type FilterType = 'all' | 'popular' | 'fast';
 
 interface GameItem {
@@ -38,167 +41,88 @@ interface GameItem {
   badge: string;
   badgeColor: string;
   icon: any;
+  coverImage: string;
   gradient: string;
   category: ('all' | 'popular' | 'fast')[];
-  renderIllustration: () => React.ReactNode;
 }
 
 const GAMES: GameItem[] = [
   {
+    id: 'penalty',
+    title: 'Пенальти',
+    subtitle: '• 5 секторов • до ×30.72',
+    badge: '• NEW',
+    badgeColor: 'text-emerald-400 bg-emerald-500/20 border-emerald-500/40',
+    icon: Trophy,
+    coverImage: '/games/cover_penalty.jpg',
+    gradient: 'from-emerald-950/80 via-slate-900 to-teal-950/60',
+    category: ['all', 'popular', 'fast'],
+  },
+  {
+    id: 'cases',
+    title: 'Кейсы',
+    subtitle: '• Рулетка дропа • до ×10',
+    badge: '• HOT',
+    badgeColor: 'text-amber-400 bg-amber-500/20 border-amber-500/40',
+    icon: Package,
+    coverImage: '/games/cover_cases.jpg',
+    gradient: 'from-amber-950/80 via-slate-900 to-yellow-950/60',
+    category: ['all', 'popular', 'fast'],
+  },
+  {
     id: 'crash',
     title: 'Crash',
-    subtitle: '• Мультиплеер • до x1000',
-    badge: '• HOT',
-    badgeColor: 'text-amber-400 bg-amber-500/10 border-amber-500/30',
+    subtitle: '• Мультиплеер • до ×1000',
+    badge: '• TOP',
+    badgeColor: 'text-rose-400 bg-rose-500/20 border-rose-500/40',
     icon: Rocket,
+    coverImage: '/games/cover_crash.jpg',
     gradient: 'from-amber-950/60 via-slate-900 to-red-950/50',
     category: ['all', 'popular', 'fast'],
-    renderIllustration: () => (
-      <div className="relative w-full h-16 flex items-center justify-center overflow-hidden">
-        {/* Trajectory curve */}
-        <svg viewBox="0 0 120 60" className="absolute inset-0 w-full h-full opacity-60 pointer-events-none">
-          <defs>
-            <linearGradient id="crashGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#ef4444" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#f59e0b" stopOpacity="0.9" />
-            </linearGradient>
-          </defs>
-          <path d="M 10 50 Q 55 48 95 18" fill="none" stroke="url(#crashGrad)" strokeWidth="3" strokeLinecap="round" />
-          <circle cx="95" cy="18" r="3.5" fill="#f59e0b" className="animate-pulse" />
-        </svg>
-        {/* Glowing Rocket */}
-        <div className="relative z-10 translate-x-3 -translate-y-1 transform rotate-[-35deg] drop-shadow-[0_0_12px_rgba(245,158,11,0.6)]">
-          <Rocket className="w-8 h-8 text-amber-400 fill-amber-500/30" />
-        </div>
-      </div>
-    ),
   },
   {
     id: 'plinko',
     title: 'Plinko',
-    subtitle: '• Падение шара • до x1000',
-    badge: '• NEW',
-    badgeColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+    subtitle: '• Падение шара • до ×1000',
+    badge: '• HIT',
+    badgeColor: 'text-cyan-400 bg-cyan-500/20 border-cyan-500/40',
     icon: Layers,
+    coverImage: '/games/cover_plinko.jpg',
     gradient: 'from-teal-950/70 via-slate-900 to-emerald-950/50',
     category: ['all', 'popular'],
-    renderIllustration: () => (
-      <div className="relative w-full h-16 flex items-center justify-center overflow-hidden">
-        {/* Plinko Pegs Pyramid & falling balls */}
-        <svg viewBox="0 0 100 60" className="w-24 h-14 opacity-80 pointer-events-none">
-          {/* Row 1 */}
-          <circle cx="50" cy="12" r="2" fill="#34d399" />
-          {/* Row 2 */}
-          <circle cx="40" cy="24" r="2" fill="#34d399" />
-          <circle cx="60" cy="24" r="2" fill="#34d399" />
-          {/* Row 3 */}
-          <circle cx="30" cy="36" r="2" fill="#34d399" />
-          <circle cx="50" cy="36" r="2" fill="#34d399" />
-          <circle cx="70" cy="36" r="2" fill="#34d399" />
-          {/* Row 4 */}
-          <circle cx="20" cy="48" r="2" fill="#34d399" />
-          <circle cx="40" cy="48" r="2" fill="#34d399" />
-          <circle cx="60" cy="48" r="2" fill="#34d399" />
-          <circle cx="80" cy="48" r="2" fill="#34d399" />
-          {/* Falling neon ball */}
-          <circle cx="45" cy="28" r="3.5" fill="#10b981" className="animate-bounce" filter="drop-shadow(0 0 6px #10b981)" />
-        </svg>
-      </div>
-    ),
   },
   {
     id: 'wheel_pvp',
     title: 'Колесо 1v1',
     subtitle: '• Дуэль игроков • 1.8x банк',
-    badge: '• 1v1 PVP',
-    badgeColor: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
+    badge: '• PVP',
+    badgeColor: 'text-purple-400 bg-purple-500/20 border-purple-500/40',
     icon: Swords,
+    coverImage: '/games/cover_wheel.jpg',
     gradient: 'from-purple-950/80 via-slate-900 to-indigo-950/60',
     category: ['all', 'popular', 'fast'],
-    renderIllustration: () => (
-      <div className="relative w-full h-16 flex items-center justify-center overflow-hidden">
-        {/* 3D Wheel Mini Graphic */}
-        <div className="relative w-14 h-14 rounded-full border-2 border-amber-400/80 bg-slate-900/90 shadow-[0_0_15px_rgba(168,85,247,0.4)] flex items-center justify-center">
-          <svg viewBox="0 0 40 40" className="w-full h-full animate-spin [animation-duration:12s]">
-            <circle cx="20" cy="20" r="18" fill="none" stroke="#6366f1" strokeWidth="2" strokeDasharray="6 4" />
-            <path d="M 20 2 L 20 38 M 2 20 L 38 20" stroke="#a855f7" strokeWidth="1.5" strokeOpacity="0.8" />
-            <path d="M 7 7 L 33 33 M 7 33 L 33 7" stroke="#eab308" strokeWidth="1" strokeOpacity="0.7" />
-          </svg>
-          <div className="absolute w-5 h-5 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-[8px] font-black text-slate-950 shadow-md">
-            VS
-          </div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    id: 'airplane',
-    title: 'Самолётик',
-    subtitle: '• Кольца и ракеты • x1.5 / ÷1.5',
-    badge: '• FAIR',
-    badgeColor: 'text-sky-400 bg-sky-500/10 border-sky-500/30',
-    icon: Plane,
-    gradient: 'from-blue-950/70 via-slate-900 to-sky-950/50',
-    category: ['all', 'fast'],
-    renderIllustration: () => (
-      <div className="relative w-full h-16 flex items-center justify-center overflow-hidden">
-        {/* Jet soaring through laser rings */}
-        <svg viewBox="0 0 100 50" className="w-24 h-12 opacity-80 pointer-events-none">
-          {/* Target Ring */}
-          <ellipse cx="65" cy="22" rx="6" ry="14" fill="none" stroke="#38bdf8" strokeWidth="1.5" strokeDasharray="3 2" />
-          {/* Jet trail */}
-          <path d="M 15 36 Q 40 32 60 22" fill="none" stroke="#0ea5e9" strokeWidth="2" strokeDasharray="4 2" />
-        </svg>
-        <div className="absolute z-10 translate-x-2 -translate-y-1 transform rotate-[-20deg] drop-shadow-[0_0_10px_rgba(56,189,248,0.6)]">
-          <Plane className="w-7 h-7 text-sky-400 fill-sky-500/20" />
-        </div>
-      </div>
-    ),
   },
   {
     id: 'hilo',
     title: 'Больше / Меньше',
-    subtitle: '• 0–999999 • 1% ком.',
-    badge: '• FAIR',
-    badgeColor: 'text-sky-400 bg-sky-500/10 border-sky-500/30',
-    icon: Binary,
-    gradient: 'from-indigo-950/70 via-slate-900 to-blue-950/50',
+    subtitle: '• Карты Hi-Lo • до ×12.8',
+    badge: '• CLASSIC',
+    badgeColor: 'text-indigo-400 bg-indigo-500/20 border-indigo-500/40',
+    icon: Sparkles,
+    coverImage: '/games/cover_hilo.jpg',
+    gradient: 'from-indigo-950/70 via-slate-900 to-violet-950/50',
     category: ['all', 'fast'],
-    renderIllustration: () => (
-      <div className="relative w-full h-16 flex items-center justify-center gap-2 overflow-hidden">
-        {/* High/Low Number Cards */}
-        <div className="px-2 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/40 text-emerald-400 font-mono font-black text-xs shadow-[0_0_8px_rgba(16,185,129,0.3)]">
-          ▲ &gt;50
-        </div>
-        <div className="px-2 py-1 rounded-lg bg-rose-500/10 border border-rose-500/40 text-rose-400 font-mono font-black text-xs shadow-[0_0_8px_rgba(244,63,94,0.3)]">
-          ▼ &lt;50
-        </div>
-      </div>
-    ),
   },
   {
     id: 'random',
     title: 'Random',
-    subtitle: '• Колесо шансов • до x5',
-    badge: '• FAIR',
-    badgeColor: 'text-purple-400 bg-purple-500/10 border-purple-500/30',
-    icon: Sparkles,
-    gradient: 'from-fuchsia-950/70 via-slate-900 to-indigo-950/50',
+    subtitle: '• Кости / Монета • 50/50',
+    badge: '• FAST',
+    badgeColor: 'text-amber-400 bg-amber-500/20 border-amber-500/40',
+    icon: Binary,
+    coverImage: '/games/cover_random.jpg',
+    gradient: 'from-amber-950/70 via-slate-900 to-orange-950/50',
     category: ['all', 'fast'],
-    renderIllustration: () => (
-      <div className="relative w-full h-16 flex items-center justify-center gap-1.5 overflow-hidden">
-        {/* Multiplier tags & sparkles */}
-        <div className="px-1.5 py-0.5 rounded-md bg-purple-500/20 border border-purple-500/40 text-purple-300 font-mono font-bold text-[10px]">
-          ×1.5
-        </div>
-        <div className="px-2 py-1 rounded-lg bg-yellow-500/20 border border-yellow-500/50 text-yellow-300 font-mono font-black text-xs shadow-[0_0_10px_rgba(234,179,8,0.4)]">
-          ★ ×5.0
-        </div>
-        <div className="px-1.5 py-0.5 rounded-md bg-pink-500/20 border border-pink-500/40 text-pink-300 font-mono font-bold text-[10px]">
-          ×2.0
-        </div>
-      </div>
-    ),
   },
 ];
 
@@ -213,38 +137,39 @@ export const MiniGamesModal: React.FC<MiniGamesModalProps> = ({
   const [filter, setFilter] = useState<FilterType>('all');
   const [favorites, setFavorites] = useState<string[]>([]);
 
-  // Load favorites from server
   useEffect(() => {
     if (isOpen) {
       apiRequest<{ success: boolean; favorites: string[] }>('/api/games/favorites')
         .then((res) => {
-          if (res.success && res.favorites) {
-            setFavorites(res.favorites);
-          }
+          if (res.success) setFavorites(res.favorites || []);
         })
         .catch(() => {});
     }
   }, [isOpen]);
 
+  if (!isOpen || !profile) return null;
+
   const handleToggleFavorite = async (gameId: string) => {
-    // Optimistic toggle
-    setFavorites((prev) =>
-      prev.includes(gameId) ? prev.filter((id) => id !== gameId) : [...prev, gameId]
-    );
     try {
       const res = await apiRequest<{ success: boolean; favorites: string[] }>('/api/games/favorites/toggle', {
         method: 'POST',
         body: JSON.stringify({ gameId }),
       });
-      if (res.success && res.favorites) {
+      if (res.success) {
         setFavorites(res.favorites);
       }
-    } catch {}
+    } catch (e) {
+      setFavorites((prev) =>
+        prev.includes(gameId) ? prev.filter((id) => id !== gameId) : [...prev, gameId]
+      );
+    }
   };
 
-  if (!isOpen || !profile) return null;
+  const filteredGames = GAMES.filter((g) => {
+    if (filter === 'all') return true;
+    return g.category.includes(filter);
+  });
 
-  const filteredGames = GAMES.filter((g) => g.category.includes(filter));
   const favoriteGamesList = GAMES.filter((g) => favorites.includes(g.id));
 
   return (
@@ -253,6 +178,44 @@ export const MiniGamesModal: React.FC<MiniGamesModalProps> = ({
         {/* If a game is selected, render the game screen */}
         {activeGame ? (
           <div className="p-4 overflow-y-auto flex-1 flex flex-col justify-between">
+            {activeGame === 'penalty' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <button
+                    onClick={() => setActiveGame(null)}
+                    className="w-8 h-8 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <h1 className="text-base font-black tracking-widest text-white uppercase font-mono flex items-center gap-1.5">
+                    <Trophy className="w-4 h-4 text-emerald-400" />
+                    ПЕНАЛЬТИ
+                  </h1>
+                  <div className="w-8" />
+                </div>
+                <PenaltyGame balance={balance} onBalanceUpdate={onBalanceUpdate} />
+              </div>
+            )}
+
+            {activeGame === 'cases' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <button
+                    onClick={() => setActiveGame(null)}
+                    className="w-8 h-8 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer"
+                  >
+                    <ChevronLeft className="w-5 h-5" />
+                  </button>
+                  <h1 className="text-base font-black tracking-widest text-white uppercase font-mono flex items-center gap-1.5">
+                    <Package className="w-4 h-4 text-amber-400" />
+                    КЕЙСЫ
+                  </h1>
+                  <div className="w-8" />
+                </div>
+                <CasesGame balance={balance} onBalanceUpdate={onBalanceUpdate} />
+              </div>
+            )}
+
             {activeGame === 'crash' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
@@ -262,16 +225,13 @@ export const MiniGamesModal: React.FC<MiniGamesModalProps> = ({
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <h1 className="text-base font-black tracking-widest text-white uppercase font-mono">
+                  <h1 className="text-base font-black tracking-widest text-white uppercase font-mono flex items-center gap-1.5">
+                    <Rocket className="w-4 h-4 text-rose-400" />
                     CRASH
                   </h1>
                   <div className="w-8" />
                 </div>
-                <CrashGame
-                  balance={balance}
-                  userId={profile.id}
-                  onBalanceUpdate={onBalanceUpdate}
-                />
+                <CrashGame balance={balance} userId={profile.id} onBalanceUpdate={onBalanceUpdate} />
               </div>
             )}
 
@@ -293,7 +253,8 @@ export const MiniGamesModal: React.FC<MiniGamesModalProps> = ({
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <h1 className="text-base font-black tracking-widest text-white uppercase font-mono">
+                  <h1 className="text-base font-black tracking-widest text-white uppercase font-mono flex items-center gap-1.5">
+                    <Swords className="w-4 h-4 text-purple-400" />
                     КОЛЕСО 1V1
                   </h1>
                   <div className="w-8" />
@@ -303,28 +264,6 @@ export const MiniGamesModal: React.FC<MiniGamesModalProps> = ({
                   username={profile.first_name || profile.username || 'Игрок'}
                   onBalanceUpdate={onBalanceUpdate}
                   onBack={() => setActiveGame(null)}
-                />
-              </div>
-            )}
-
-            {activeGame === 'airplane' && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between px-1">
-                  <button
-                    onClick={() => setActiveGame(null)}
-                    className="w-8 h-8 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer"
-                  >
-                    <ChevronLeft className="w-5 h-5" />
-                  </button>
-                  <h1 className="text-base font-black tracking-widest text-white uppercase font-mono">
-                    САМОЛЁТИК
-                  </h1>
-                  <div className="w-8" />
-                </div>
-                <AirplaneGame
-                  balance={balance}
-                  onBalanceUpdate={onBalanceUpdate}
-                  planeSkin={profile?.active_plane_skin}
                 />
               </div>
             )}
@@ -366,7 +305,7 @@ export const MiniGamesModal: React.FC<MiniGamesModalProps> = ({
             )}
           </div>
         ) : (
-          /* ИГРОВОЙ ЗАЛ (Matching Screenshot 4) */
+          /* ИГРОВОЙ ЗАЛ - Каталог игр с кинематографичными обложками */
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header: Back Button + Title */}
             <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/5 bg-[#121827]">
@@ -432,17 +371,25 @@ export const MiniGamesModal: React.FC<MiniGamesModalProps> = ({
                       <div
                         key={`fav-${game.id}`}
                         onClick={() => setActiveGame(game.id)}
-                        className={`shrink-0 w-36 rounded-2xl bg-gradient-to-br ${game.gradient} border border-amber-500/40 p-3 flex flex-col justify-between h-32 hover:border-amber-400 transition cursor-pointer shadow-lg active:scale-95 group`}
+                        className="relative shrink-0 w-36 h-36 rounded-2xl overflow-hidden border border-amber-500/50 p-2.5 flex flex-col justify-between hover:border-amber-400 transition cursor-pointer shadow-lg active:scale-95 group"
                       >
-                        <div className="flex items-center justify-between">
-                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                            ★ ИЗБРАННОЕ
+                        <img
+                          src={game.coverImage}
+                          alt={game.title}
+                          className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-500"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-black/40 to-black/30 pointer-events-none" />
+
+                        <div className="relative z-10 flex items-center justify-between">
+                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-500/80 text-black">
+                            ★
                           </span>
-                          <game.icon className="w-4 h-4 text-amber-400 group-hover:scale-110 transition" />
+                          <game.icon className="w-4 h-4 text-amber-400 drop-shadow-md" />
                         </div>
-                        <div>
+                        <div className="relative z-10">
                           <h5 className="text-xs font-black text-white group-hover:text-amber-300 transition">{game.title}</h5>
-                          <p className="text-[9px] text-slate-400 truncate">{game.subtitle}</p>
+                          <p className="text-[9px] text-slate-300 truncate">{game.subtitle}</p>
                         </div>
                       </div>
                     ))}
@@ -455,66 +402,70 @@ export const MiniGamesModal: React.FC<MiniGamesModalProps> = ({
                 КАТАЛОГ ИГР ({filteredGames.length})
               </div>
 
-              {/* 2-Column Games Grid with Visual Icons / Illustrations & Star Toggles */}
+              {/* 2-Column Games Grid with Cinematic AI Covers */}
               <div className="grid grid-cols-2 gap-3 pb-2">
                 {filteredGames.map((game) => {
                   const Icon = game.icon;
                   const isFav = favorites.includes(game.id);
+
                   return (
                     <div
                       key={game.id}
                       onClick={() => setActiveGame(game.id)}
-                      className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${game.gradient} border ${
-                        isFav ? 'border-amber-500/30' : 'border-white/10'
-                      } p-3.5 flex flex-col justify-between h-44 hover:border-sky-500/40 transition-all transform active:scale-95 cursor-pointer shadow-lg group`}
+                      className={`relative overflow-hidden rounded-2xl border ${
+                        isFav ? 'border-amber-500/50 shadow-amber-500/10' : 'border-white/10'
+                      } flex flex-col justify-between h-48 hover:border-sky-500/60 transition-all transform active:scale-95 cursor-pointer shadow-xl group`}
                     >
-                      {/* Badge in top-left, star toggle + mini icon in top-right */}
-                      <div className="flex items-center justify-between">
-                        <span
-                          className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border ${game.badgeColor}`}
-                        >
+                      {/* Cinematic AI Cover Image as Background with Zoom & Glow */}
+                      <img
+                        src={game.coverImage}
+                        alt={game.title}
+                        className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-110 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/50 to-black/30 pointer-events-none" />
+
+                      {/* Top Row: Badge & Star Toggle */}
+                      <div className="relative z-10 p-3 flex items-center justify-between">
+                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md border backdrop-blur-md ${game.badgeColor}`}>
                           {game.badge}
                         </span>
 
-                        <div className="flex items-center gap-1">
-                          {/* Star Toggle Button */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleToggleFavorite(game.id);
-                            }}
-                            className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition cursor-pointer"
-                            title={isFav ? 'Убрать из избранного' : 'Добавить в избранное'}
-                          >
-                            <Star
-                              className={`w-4 h-4 transition ${
-                                isFav
-                                  ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.7)]'
-                                  : 'text-slate-500 hover:text-slate-300'
-                              }`}
-                            />
-                          </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleFavorite(game.id);
+                          }}
+                          className="w-7 h-7 rounded-lg bg-black/60 backdrop-blur-md hover:bg-black/80 flex items-center justify-center transition cursor-pointer"
+                          title={isFav ? 'Убрать из избранного' : 'Добавить в избранное'}
+                        >
+                          <Star
+                            className={`w-4 h-4 transition ${
+                              isFav
+                                ? 'text-amber-400 fill-amber-400 drop-shadow-[0_0_8px_rgba(245,158,11,0.7)]'
+                                : 'text-slate-400 hover:text-white'
+                            }`}
+                          />
+                        </button>
+                      </div>
 
-                          <div className="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-slate-400 group-hover:text-white group-hover:bg-white/10 transition">
-                            <Icon className="w-4 h-4" />
+                      {/* Bottom Row: Title, Subtitle, and Arrow */}
+                      <div className="relative z-10 p-3 bg-gradient-to-t from-black via-black/80 to-transparent">
+                        <div className="flex items-center justify-between">
+                          <div className="min-w-0 pr-1">
+                            <h4 className="text-sm font-black text-white group-hover:text-sky-300 transition flex items-center gap-1.5 truncate">
+                              <Icon className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                              <span className="truncate">{game.title}</span>
+                            </h4>
+                            <p className="text-[10px] text-slate-300 font-medium truncate">
+                              {game.subtitle}
+                            </p>
+                          </div>
+                          <div className="w-6 h-6 rounded-full bg-white/10 group-hover:bg-sky-500 group-hover:text-black text-white flex items-center justify-center transition shrink-0">
+                            <ChevronRight className="w-3.5 h-3.5" />
                           </div>
                         </div>
-                      </div>
-
-                      {/* Center Visual Artwork / Graphic */}
-                      <div className="my-auto py-1">
-                        {game.renderIllustration()}
-                      </div>
-
-                      {/* Game Title & Subtitle in bottom */}
-                      <div className="space-y-0.5 pt-1">
-                        <h4 className="text-sm font-black text-white group-hover:text-sky-300 transition">
-                          {game.title}
-                        </h4>
-                        <p className="text-[10px] text-slate-400 font-medium truncate">
-                          {game.subtitle}
-                        </p>
                       </div>
                     </div>
                   );

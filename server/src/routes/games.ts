@@ -2,7 +2,8 @@ import { FastifyInstance } from 'fastify';
 import { authenticateRequest } from '../auth.js';
 import { crashEngine } from '../crashEngine.js';
 import { pvpWheelManager } from '../pvpWheelEngine.js';
-import { airplaneEngine } from '../airplaneEngine.js';
+import { penaltyEngine } from '../penaltyEngine.js';
+import { casesEngine } from '../casesEngine.js';
 import {
   generateServerSeed,
   hashServerSeed,
@@ -90,37 +91,52 @@ export async function gamesRoutes(fastify: FastifyInstance) {
     });
   });
 
-  // 2. Airplane 3D Game (Самолётик)
-  fastify.post('/airplane/start-round', async (req, reply) => {
+  // 2. Penalty Shootout Game (Пенальти)
+  fastify.post('/penalty/start-round', async (req, reply) => {
     const user = await authenticateRequest(req, reply);
     if (!user) return reply.status(401).send({ error: 'Unauthorized' });
 
     const { bet } = (req.body as { bet?: number }) || {};
     try {
-      const round = airplaneEngine.startRound(user.id, Number(bet || 5.0));
-      const updatedUser = getUserById(user.id)!;
+      const round = penaltyEngine.startRound(user.id, Number(bet || 0.01));
+      const freshUser = getUserById(user.id)!;
       return {
         success: true,
         round: {
           roundId: round.roundId,
           bet: round.bet,
-          status: round.status,
-          obstacles: round.obstacles,
-          flightDurationMs: round.flightDurationMs,
-          landingSuccess: round.landingSuccess,
-          preLandingMultiplier: round.preLandingMultiplier,
-          finalMultiplier: round.finalMultiplier,
-          payout: round.payout,
+          currentStep: round.currentStep,
+          maxSteps: round.maxSteps,
+          multipliers: round.multipliers,
+          history: round.history,
+          isFinished: round.isFinished,
           serverSeedHash: round.serverSeedHash,
         },
-        balance: updatedUser.balance,
+        balance: freshUser.balance,
       };
     } catch (err: any) {
-      return reply.status(400).send({ error: err.message || 'Ошибка запуска полёта' });
+      return reply.status(400).send({ error: err.message || 'Ошибка старта пенальти' });
     }
   });
 
-  fastify.post('/airplane/claim-round', async (req, reply) => {
+  fastify.post('/penalty/shoot', async (req, reply) => {
+    const user = await authenticateRequest(req, reply);
+    if (!user) return reply.status(401).send({ error: 'Unauthorized' });
+
+    const { roundId, targetZone } = (req.body as { roundId?: string; targetZone?: number }) || {};
+    if (!roundId || targetZone === undefined) {
+      return reply.status(400).send({ error: 'Укажите roundId и targetZone' });
+    }
+
+    try {
+      const res = penaltyEngine.shoot(roundId, user.id, Number(targetZone));
+      return res;
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message || 'Ошибка удара' });
+    }
+  });
+
+  fastify.post('/penalty/cashout', async (req, reply) => {
     const user = await authenticateRequest(req, reply);
     if (!user) return reply.status(401).send({ error: 'Unauthorized' });
 
@@ -130,55 +146,33 @@ export async function gamesRoutes(fastify: FastifyInstance) {
     }
 
     try {
-      const result = airplaneEngine.claimRound(user.id, roundId);
-      const isWin = result.round.landingSuccess && result.round.finalMultiplier > 0;
-      if (isWin && result.round.payout > result.round.bet) {
-        const refRes = addReferralEarning(user.id, result.round.payout - result.round.bet, 'game');
-        if (refRes) notifyReferralEarning(refRes.referrerId, refRes.friendName, refRes.bonus);
-      }
-
-      return {
-        success: true,
-        roundId: result.round.roundId,
-        payout: result.round.payout,
-        finalMultiplier: result.round.finalMultiplier,
-        isWin,
-        balance: result.balance,
-        provablyFair: {
-          serverSeed: result.round.serverSeed,
-          serverSeedHash: result.round.serverSeedHash,
-          clientSeed: result.round.clientSeed,
-          nonce: result.round.nonce,
-          hmac: result.round.hmac,
-        },
-      };
+      const res = penaltyEngine.cashOut(roundId, user.id);
+      return res;
     } catch (err: any) {
-      return reply.status(400).send({ error: err.message || 'Ошибка завершения полёта' });
+      return reply.status(400).send({ error: err.message || 'Ошибка вывода' });
     }
   });
 
-  // Legacy fallback
-  fastify.post('/airplane/play', async (req, reply) => {
+  // 3. Mystery Cases Game (Кейсы / Лутбоксы)
+  fastify.get('/cases/catalog', async () => {
+    return { success: true, cases: casesEngine.getCatalog() };
+  });
+
+  fastify.post('/cases/open', async (req, reply) => {
     const user = await authenticateRequest(req, reply);
     if (!user) return reply.status(401).send({ error: 'Unauthorized' });
 
-    const { bet } = (req.body as { bet?: number }) || {};
-    const round = airplaneEngine.startRound(user.id, Number(bet || 5.0));
-    const result = airplaneEngine.claimRound(user.id, round.roundId);
-    return {
-      success: true,
-      flight: {
-        events: round.obstacles.map((o) => ({ type: o.type, multiplierDelta: o.multiplierFactor })),
-        initialMultiplier: round.initialMultiplier,
-        preLandingMultiplier: round.preLandingMultiplier,
-        finalMultiplier: round.finalMultiplier,
-        landingSuccess: round.landingSuccess,
-        hmac: round.hmac,
-      },
-      payout: round.payout,
-      isWin: round.landingSuccess && round.finalMultiplier > 0,
-      balance: result.balance,
-    };
+    const { caseId } = (req.body as { caseId?: string }) || {};
+    if (!caseId) {
+      return reply.status(400).send({ error: 'Укажите caseId' });
+    }
+
+    try {
+      const result = casesEngine.openCase(user.id, caseId);
+      return result;
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message || 'Ошибка открытия кейса' });
+    }
   });
 
   // 3. Random Game (Колесо вероятностей)
