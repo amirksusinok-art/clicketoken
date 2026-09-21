@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Gamepad2, Users, Zap, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Gamepad2, Users, Zap, ShieldCheck, AlertCircle, Cpu, Gift, Palette } from 'lucide-react';
 import { Header } from './components/Header.js';
 import { Coin } from './components/Coin.js';
 import { UpgraderModal } from './components/UpgraderModal.js';
@@ -8,6 +8,9 @@ import { MiniGamesModal } from './components/games/MiniGamesModal.js';
 import { ProvablyFairModal } from './components/ProvablyFairModal.js';
 import { ProfileModal } from './components/profile/ProfileModal.js';
 import { FriendsModal } from './components/friends/FriendsModal.js';
+import { FarmingModal } from './components/farming/FarmingModal.js';
+import { ReferralsModal } from './components/referrals/ReferralsModal.js';
+import { ShopModal } from './components/shop/ShopModal.js';
 import { AnimatedNumber } from './components/AnimatedNumber.js';
 import { useClicker } from './hooks/useClicker.js';
 
@@ -34,11 +37,29 @@ export function App() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [targetProfileId, setTargetProfileId] = useState<number | null>(null);
   const [isFriendsOpen, setIsFriendsOpen] = useState(false);
+  const [isFarmingOpen, setIsFarmingOpen] = useState(false);
+  const [isReferralsOpen, setIsReferralsOpen] = useState(false);
+  const [isShopOpen, setIsShopOpen] = useState(false);
   const [prefillRecipient, setPrefillRecipient] = useState<string | undefined>(undefined);
 
   const openUpgrader = () => {
     flushClicks();
     setIsUpgraderOpen(true);
+  };
+
+  const openFarming = () => {
+    flushClicks();
+    setIsFarmingOpen(true);
+  };
+
+  const openReferrals = () => {
+    flushClicks();
+    setIsReferralsOpen(true);
+  };
+
+  const openShop = () => {
+    flushClicks();
+    setIsShopOpen(true);
   };
 
   const openGames = () => {
@@ -123,10 +144,47 @@ export function App() {
                 : (profile?.earn_per_click ?? 0.001).toFixed(3)} за тап
             </span>
           </div>
+
+          {/* Quick Action Systems: Farming, Referrals 2.0, Skins */}
+          <div className="w-full flex items-center justify-center gap-2 mt-2.5">
+            <button
+              onClick={openFarming}
+              className="flex-1 py-1.5 px-2 rounded-xl bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-500/30 hover:border-emerald-400 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-md group"
+            >
+              <Cpu className="w-3.5 h-3.5 text-emerald-400 group-hover:rotate-12 transition" />
+              <span className="text-[11px] font-bold text-emerald-300">Ферма</span>
+              {(profile?.mining_level ?? 0) > 0 && (
+                <span className="text-[9px] px-1 py-0.2 bg-emerald-500/20 text-emerald-300 rounded font-mono font-bold">
+                  L{profile?.mining_level}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={openReferrals}
+              className="flex-1 py-1.5 px-2 rounded-xl bg-gradient-to-r from-blue-950/60 to-indigo-950/60 border border-blue-500/30 hover:border-blue-400 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-md group relative"
+            >
+              <Gift className="w-3.5 h-3.5 text-blue-400 group-hover:scale-110 transition" />
+              <span className="text-[11px] font-bold text-blue-300">Рефералы</span>
+              {(profile?.referral_unclaimed ?? 0) > 0 && (
+                <span className="text-[9px] px-1.5 py-0.2 bg-amber-500 text-slate-950 rounded-full font-mono font-black animate-pulse">
+                  +{(profile?.referral_unclaimed ?? 0).toFixed(1)}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={openShop}
+              className="flex-1 py-1.5 px-2 rounded-xl bg-gradient-to-r from-purple-950/60 to-pink-950/60 border border-purple-500/30 hover:border-purple-400 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-md group"
+            >
+              <Palette className="w-3.5 h-3.5 text-purple-400 group-hover:rotate-12 transition" />
+              <span className="text-[11px] font-bold text-purple-300">Скины</span>
+            </button>
+          </div>
         </div>
 
         {/* Middle: Menu Cards Grid (Matching Screenshot 2 Cards Style) */}
-        <div className="w-full grid grid-cols-4 gap-2.5 my-3">
+        <div className="w-full grid grid-cols-4 gap-2.5 my-2.5">
           {/* Card 1: Игры (Pink/Magenta Icon) */}
           <button
             onClick={openGames}
@@ -177,6 +235,7 @@ export function App() {
           <Coin
             earnPerClick={profile?.earn_per_click || 0.001}
             onTap={handleTap}
+            skin={profile?.active_coin_skin || 'default'}
           />
         </div>
       </main>
@@ -243,6 +302,42 @@ export function App() {
         profile={profile}
         onSeedUpdated={(newSeed) => {
           setProfile((prev) => (prev ? { ...prev, client_seed: newSeed } : null));
+        }}
+      />
+
+      <FarmingModal
+        isOpen={isFarmingOpen}
+        onClose={() => setIsFarmingOpen(false)}
+        balance={displayBalance}
+        onBalanceUpdate={(newBal) => updateBalanceDirectly(newBal)}
+      />
+
+      <ReferralsModal
+        isOpen={isReferralsOpen}
+        onClose={() => setIsReferralsOpen(false)}
+        onBalanceUpdate={(newBal) => {
+          updateBalanceDirectly(newBal);
+          setProfile((prev) => (prev ? { ...prev, referral_unclaimed: 0 } : null));
+        }}
+      />
+
+      <ShopModal
+        isOpen={isShopOpen}
+        onClose={() => setIsShopOpen(false)}
+        balance={displayBalance}
+        activeCoinSkin={profile?.active_coin_skin || 'default'}
+        activePlaneSkin={profile?.active_plane_skin || 'default'}
+        onBalanceUpdate={(newBal) => updateBalanceDirectly(newBal)}
+        onSkinChange={(type, skinId) => {
+          setProfile((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  active_coin_skin: type === 'coin' ? skinId : prev.active_coin_skin,
+                  active_plane_skin: type === 'plane' ? skinId : prev.active_plane_skin,
+                }
+              : null
+          );
         }}
       />
     </div>

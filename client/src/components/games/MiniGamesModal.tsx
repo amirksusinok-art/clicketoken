@@ -321,7 +321,11 @@ export const MiniGamesModal: React.FC<MiniGamesModalProps> = ({
                   </h1>
                   <div className="w-8" />
                 </div>
-                <AirplaneGame balance={balance} onBalanceUpdate={onBalanceUpdate} />
+                <AirplaneGame
+                  balance={balance}
+                  onBalanceUpdate={onBalanceUpdate}
+                  planeSkin={profile?.active_plane_skin}
+                />
               </div>
             )}
 

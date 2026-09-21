@@ -56,10 +56,21 @@ export async function authenticateRequest(
   if (initData && botToken) {
     const { valid, user } = validateTelegramInitData(initData, botToken);
     if (valid && user && user.id) {
+      const params = new URLSearchParams(initData);
+      const startParam = params.get('start_param') || (req.headers['x-referral-code'] as string);
+      let referrerId: number | undefined;
+      if (startParam && typeof startParam === 'string' && startParam.startsWith('ref_')) {
+        const parsed = parseInt(startParam.replace('ref_', ''), 10);
+        if (!isNaN(parsed)) referrerId = parsed;
+      }
+      const isPremium = !!user.is_premium;
+
       const dbUser = findOrCreateUser(
         user.id,
         user.first_name || 'Telegram User',
-        user.username || null
+        user.username || null,
+        referrerId,
+        isPremium
       );
       return dbUser;
     }
@@ -70,6 +81,13 @@ export async function authenticateRequest(
   const devName = devId === 10001 ? 'Player 1 (Alpha)' : `Player ${devId}`;
   const devUsername = devId === 10001 ? 'player_one' : `player_${devId}`;
 
-  const devUser = findOrCreateUser(devId, devName, devUsername);
+  const refHeader = req.headers['x-referral-code'] as string | undefined;
+  let devRefId: number | undefined;
+  if (refHeader && refHeader.startsWith('ref_')) {
+    const parsed = parseInt(refHeader.replace('ref_', ''), 10);
+    if (!isNaN(parsed)) devRefId = parsed;
+  }
+
+  const devUser = findOrCreateUser(devId, devName, devUsername, devRefId, false);
   return devUser;
 }

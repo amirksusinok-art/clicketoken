@@ -2,6 +2,8 @@ import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
+import { VIDEO_CARDS, getCardByLevel } from './farmingConfig.js';
+import { SKINS_CATALOG, getSkinById } from './skinsConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -83,13 +85,40 @@ db.exec(`
     created_at INTEGER NOT NULL,
     PRIMARY KEY(user_id, game_id)
   );
+
+  CREATE TABLE IF NOT EXISTS referrals (
+    referrer_id INTEGER NOT NULL,
+    referred_id INTEGER NOT NULL PRIMARY KEY,
+    bonus_paid REAL NOT NULL,
+    earned_from_clicks REAL DEFAULT 0,
+    earned_from_games REAL DEFAULT 0,
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_id);
+
+  CREATE TABLE IF NOT EXISTS user_skins (
+    user_id INTEGER NOT NULL,
+    skin_id TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    PRIMARY KEY(user_id, skin_id)
+  );
 `);
 
-try {
-  db.exec(`ALTER TABLE users ADD COLUMN hide_public_balance INTEGER DEFAULT 0;`);
-} catch {
-  // column already exists
-}
+// Dynamic safe migrations
+const safeAddCol = (colSql: string) => {
+  try {
+    db.exec(colSql);
+  } catch {}
+};
+
+safeAddCol(`ALTER TABLE users ADD COLUMN hide_public_balance INTEGER DEFAULT 0;`);
+safeAddCol(`ALTER TABLE users ADD COLUMN mining_level INTEGER DEFAULT 0;`);
+safeAddCol(`ALTER TABLE users ADD COLUMN last_farm_claim_at INTEGER DEFAULT 0;`);
+safeAddCol(`ALTER TABLE users ADD COLUMN referral_unclaimed REAL DEFAULT 0;`);
+safeAddCol(`ALTER TABLE users ADD COLUMN referred_by INTEGER DEFAULT NULL;`);
+safeAddCol(`ALTER TABLE users ADD COLUMN active_coin_skin TEXT DEFAULT 'default';`);
+safeAddCol(`ALTER TABLE users ADD COLUMN active_plane_skin TEXT DEFAULT 'default';`);
 
 export interface UserRow {
   id: number;
@@ -102,6 +131,12 @@ export interface UserRow {
   client_seed: string;
   nonce: number;
   hide_public_balance?: number;
+  mining_level?: number;
+  last_farm_claim_at?: number;
+  referral_unclaimed?: number;
+  referred_by?: number | null;
+  active_coin_skin?: string;
+  active_plane_skin?: string;
   created_at: number;
   last_click_at: number;
 }
@@ -135,7 +170,9 @@ export interface GameHistoryRow {
 export function findOrCreateUser(
   id: number,
   first_name: string,
-  username?: string | null
+  username?: string | null,
+  referrerId?: number,
+  isPremium?: boolean
 ): UserRow {
   const existing = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as unknown as UserRow | undefined;
   const now = Date.now();
@@ -152,6 +189,29 @@ export function findOrCreateUser(
       existing.first_name = first_name;
     }
     return existing;
+  }
+
+  // Handle referral bonus if valid referrer
+  if (referrerId && referrerId !== id) {
+    const referrer = getUserById(referrerId);
+    if (referrer) {
+      const bonus = isPremium ? 5.0 : 1.0;
+      db.prepare(`
+        INSERT INTO users (id, username, username_lower, first_name, balance, earn_per_click, upgrade_level, client_seed, nonce, referred_by, created_at, last_click_at)
+        VALUES (?, ?, ?, ?, ?, 0.001, 1, 'client_seed_' || ?, 0, ?, ?, ?)
+      `).run(id, username || null, username_lower, first_name, bonus, id, referrerId, now, now);
+
+      // Reward referrer immediately with welcome bonus
+      db.prepare('UPDATE users SET balance = ROUND(balance + ?, 4) WHERE id = ?').run(bonus, referrerId);
+
+      // Record in referrals table
+      db.prepare(`
+        INSERT INTO referrals (referrer_id, referred_id, bonus_paid, earned_from_clicks, earned_from_games, created_at)
+        VALUES (?, ?, ?, 0, 0, ?)
+      `).run(referrerId, id, bonus, now);
+
+      return db.prepare('SELECT * FROM users WHERE id = ?').get(id) as unknown as UserRow;
+    }
   }
 
   db.prepare(`
@@ -442,4 +502,264 @@ export function toggleFavoriteGame(userId: number, gameId: string): string[] {
   }
   return getFavoriteGames(userId);
 }
+
+// ----------------------------------------------------
+// Farming (Mining Farm & Video Cards)
+// ----------------------------------------------------
+
+export function getMiningState(userId: number) {
+  const user = getUserById(userId);
+  if (!user) return null;
+
+  const currentLevel = user.mining_level || 0;
+  const currentCard = getCardByLevel(currentLevel);
+  const nextCard = getCardByLevel(currentLevel + 1);
+
+  if (!currentCard) {
+    return {
+      miningLevel: 0,
+      currentCard: null,
+      nextCard: getCardByLevel(1) || null,
+      accumulated: 0,
+      maxStorageTokens: 0,
+      storageFullPercent: 0,
+      storageTimeLeftSec: 0,
+      lastClaimAt: user.last_farm_claim_at || 0,
+    };
+  }
+
+  const now = Date.now();
+  const lastClaim = user.last_farm_claim_at || now;
+  const elapsedMs = Math.max(0, now - lastClaim);
+  const maxStorageMs = currentCard.storageHours * 3600 * 1000;
+  const effectiveMs = Math.min(elapsedMs, maxStorageMs);
+
+  const accumulated = Math.round((effectiveMs / (3600 * 1000)) * currentCard.earnPerHour * 10000) / 10000;
+  const maxStorageTokens = Math.round(currentCard.storageHours * currentCard.earnPerHour * 10000) / 10000;
+  const storageFullPercent = Math.min(100, Math.round((effectiveMs / maxStorageMs) * 100));
+  const storageTimeLeftSec = Math.max(0, Math.round((maxStorageMs - effectiveMs) / 1000));
+
+  return {
+    miningLevel: currentLevel,
+    currentCard,
+    nextCard: nextCard || null,
+    accumulated,
+    maxStorageTokens,
+    storageFullPercent,
+    storageTimeLeftSec,
+    lastClaimAt: lastClaim,
+  };
+}
+
+export function claimMiningReward(userId: number): { claimed: number; newBalance: number } {
+  const state = getMiningState(userId);
+  if (!state || state.accumulated <= 0) {
+    const user = getUserById(userId);
+    return { claimed: 0, newBalance: user ? user.balance : 0 };
+  }
+
+  const claimed = state.accumulated;
+  const now = Date.now();
+  db.prepare(`
+    UPDATE users 
+    SET balance = ROUND(balance + ?, 4),
+        last_farm_claim_at = ?
+    WHERE id = ?
+  `).run(claimed, now, userId);
+
+  const updatedUser = getUserById(userId)!;
+  return { claimed, newBalance: updatedUser.balance };
+}
+
+export function upgradeMiningFarm(userId: number): { success: boolean; newLevel: number; newBalance: number; error?: string } {
+  const user = getUserById(userId);
+  if (!user) return { success: false, newLevel: 0, newBalance: 0, error: 'Пользователь не найден' };
+
+  const currentLevel = user.mining_level || 0;
+  const nextCard = getCardByLevel(currentLevel + 1);
+  if (!nextCard) {
+    return { success: false, newLevel: currentLevel, newBalance: user.balance, error: 'Достигнут максимальный уровень фермы' };
+  }
+
+  if (user.balance < nextCard.cost) {
+    return { success: false, newLevel: currentLevel, newBalance: user.balance, error: 'Недостаточно токенов для покупки' };
+  }
+
+  // Claim any existing accumulated profit first
+  const existingState = getMiningState(userId);
+  const pendingProfit = existingState ? existingState.accumulated : 0;
+
+  const now = Date.now();
+  db.prepare(`
+    UPDATE users 
+    SET balance = ROUND(balance - ? + ?, 4),
+        mining_level = ?,
+        last_farm_claim_at = ?
+    WHERE id = ?
+  `).run(nextCard.cost, pendingProfit, nextCard.level, now, userId);
+
+  const updatedUser = getUserById(userId)!;
+  return { success: true, newLevel: nextCard.level, newBalance: updatedUser.balance };
+}
+
+// ----------------------------------------------------
+// Referrals 2.0
+// ----------------------------------------------------
+
+export function addReferralEarning(referredId: number, amountEarned: number, type: 'click' | 'game') {
+  if (amountEarned <= 0) return;
+  const user = getUserById(referredId);
+  if (!user || !user.referred_by) return;
+
+  const referrerId = user.referred_by;
+  const rate = type === 'click' ? 0.10 : 0.05;
+  const bonus = Math.round(amountEarned * rate * 10000) / 10000;
+  if (bonus <= 0) return;
+
+  // Credit to referrer safe
+  db.prepare('UPDATE users SET referral_unclaimed = ROUND(COALESCE(referral_unclaimed, 0) + ?, 4) WHERE id = ?').run(bonus, referrerId);
+
+  // Update referrals table tracking
+  if (type === 'click') {
+    db.prepare('UPDATE referrals SET earned_from_clicks = ROUND(earned_from_clicks + ?, 4) WHERE referrer_id = ? AND referred_id = ?').run(bonus, referrerId, referredId);
+  } else {
+    db.prepare('UPDATE referrals SET earned_from_games = ROUND(earned_from_games + ?, 4) WHERE referrer_id = ? AND referred_id = ?').run(bonus, referrerId, referredId);
+  }
+}
+
+export function claimReferralEarnings(userId: number): { claimed: number; newBalance: number } {
+  const user = getUserById(userId);
+  if (!user) return { claimed: 0, newBalance: 0 };
+
+  const unclaimed = user.referral_unclaimed || 0;
+  if (unclaimed <= 0) return { claimed: 0, newBalance: user.balance };
+
+  db.prepare(`
+    UPDATE users 
+    SET balance = ROUND(balance + ?, 4),
+        referral_unclaimed = 0
+    WHERE id = ?
+  `).run(unclaimed, userId);
+
+  const updatedUser = getUserById(userId)!;
+  return { claimed: unclaimed, newBalance: updatedUser.balance };
+}
+
+export interface ReferralFriendItem {
+  id: number;
+  username: string | null;
+  first_name: string;
+  bonusPaid: number;
+  earnedTotal: number;
+  createdAt: number;
+}
+
+export function getReferralsInfo(userId: number) {
+  const user = getUserById(userId);
+  if (!user) return null;
+
+  const unclaimed = user.referral_unclaimed || 0;
+
+  const rows = db.prepare(`
+    SELECT 
+      r.referred_id as id,
+      u.username,
+      u.first_name,
+      r.bonus_paid as bonusPaid,
+      ROUND(r.earned_from_clicks + r.earned_from_games, 4) as earnedTotal,
+      r.created_at as createdAt
+    FROM referrals r
+    JOIN users u ON u.id = r.referred_id
+    WHERE r.referrer_id = ?
+    ORDER BY r.created_at DESC
+  `).all(userId) as unknown as ReferralFriendItem[];
+
+  let totalEarned = 0;
+  for (const r of rows) {
+    totalEarned += (r.earnedTotal || 0) + (r.bonusPaid || 0);
+  }
+
+  // Top 10 inviters overall
+  const topInviters = db.prepare(`
+    SELECT 
+      u.id,
+      u.username,
+      u.first_name,
+      COUNT(r.referred_id) as friendsCount,
+      ROUND(SUM(r.bonus_paid + r.earned_from_clicks + r.earned_from_games), 4) as totalEarned
+    FROM referrals r
+    JOIN users u ON u.id = r.referrer_id
+    GROUP BY r.referrer_id
+    ORDER BY friendsCount DESC, totalEarned DESC
+    LIMIT 10
+  `).all() as any[];
+
+  return {
+    unclaimedBalance: unclaimed,
+    totalEarned: Math.round(totalEarned * 10000) / 10000,
+    friendsCount: rows.length,
+    friends: rows,
+    topInviters,
+  };
+}
+
+// ----------------------------------------------------
+// Skins Shop
+// ----------------------------------------------------
+
+export function getUserPurchasedSkins(userId: number): string[] {
+  const rows = db.prepare('SELECT skin_id FROM user_skins WHERE user_id = ?').all(userId) as { skin_id: string }[];
+  return ['default', ...rows.map((r) => r.skin_id)];
+}
+
+export function buySkin(userId: number, skinId: string, skinType: 'coin' | 'plane'): { success: boolean; error?: string; newBalance?: number } {
+  const skin = getSkinById(skinId, skinType);
+  if (!skin) return { success: false, error: 'Скин не найден' };
+
+  const user = getUserById(userId);
+  if (!user) return { success: false, error: 'User not found' };
+
+  if (skin.cost === 0) {
+    return { success: true, newBalance: user.balance };
+  }
+
+  const owned = getUserPurchasedSkins(userId);
+  if (owned.includes(skinId)) {
+    return { success: false, error: 'Скин уже куплен' };
+  }
+
+  if (user.balance < skin.cost) {
+    return { success: false, error: 'Недостаточно токенов' };
+  }
+
+  const now = Date.now();
+  db.prepare('UPDATE users SET balance = ROUND(balance - ?, 4) WHERE id = ?').run(skin.cost, userId);
+  db.prepare('INSERT INTO user_skins (user_id, skin_id, created_at) VALUES (?, ?, ?)').run(userId, skinId, now);
+
+  // Equip automatically
+  if (skinType === 'coin') {
+    db.prepare('UPDATE users SET active_coin_skin = ? WHERE id = ?').run(skinId, userId);
+  } else {
+    db.prepare('UPDATE users SET active_plane_skin = ? WHERE id = ?').run(skinId, userId);
+  }
+
+  const updatedUser = getUserById(userId)!;
+  return { success: true, newBalance: updatedUser.balance };
+}
+
+export function equipSkin(userId: number, skinId: string, skinType: 'coin' | 'plane'): { success: boolean; error?: string } {
+  const owned = getUserPurchasedSkins(userId);
+  if (!owned.includes(skinId)) {
+    return { success: false, error: 'Вы не владеете этим скином' };
+  }
+
+  if (skinType === 'coin') {
+    db.prepare('UPDATE users SET active_coin_skin = ? WHERE id = ?').run(skinId, userId);
+  } else {
+    db.prepare('UPDATE users SET active_plane_skin = ? WHERE id = ?').run(skinId, userId);
+  }
+
+  return { success: true };
+}
+
 

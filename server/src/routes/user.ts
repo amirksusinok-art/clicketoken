@@ -13,6 +13,7 @@ import {
   searchUsersByUsername,
   getUserPublicStats,
   updateUserPrivacy,
+  addReferralEarning,
 } from '../db.js';
 import { UPGRADES, getNextUpgrade } from '../upgrades.js';
 
@@ -36,6 +37,10 @@ export async function userRoutes(fastify: FastifyInstance) {
         client_seed: user.client_seed,
         nonce: user.nonce,
         hide_public_balance: user.hide_public_balance || 0,
+        mining_level: user.mining_level || 0,
+        referral_unclaimed: user.referral_unclaimed || 0,
+        active_coin_skin: user.active_coin_skin || 'default',
+        active_plane_skin: user.active_plane_skin || 'default',
       },
       nextUpgrade,
       upgrades: UPGRADES,
@@ -63,6 +68,9 @@ export async function userRoutes(fastify: FastifyInstance) {
 
     const earned = Math.round(verifiedClicks * user.earn_per_click * 10000) / 10000;
     const updatedUser = recordClicksBatch(user.id, verifiedClicks, earned);
+
+    // Credit 10% to referrer if user was invited
+    addReferralEarning(user.id, earned, 'click');
 
     return {
       success: true,

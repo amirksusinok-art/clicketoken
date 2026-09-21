@@ -8,6 +8,9 @@ import dotenv from 'dotenv';
 import { userRoutes } from './routes/user.js';
 import { gamesRoutes } from './routes/games.js';
 import { transfersRoutes } from './routes/transfers.js';
+import { farmingRoutes } from './routes/farming.js';
+import { referralsRoutes } from './routes/referrals.js';
+import { shopRoutes } from './routes/shop.js';
 import { setupTelegramBot } from './bot.js';
 
 dotenv.config();
@@ -44,6 +47,9 @@ fastify.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, b
 await fastify.register(userRoutes, { prefix: '/api/user' });
 await fastify.register(gamesRoutes, { prefix: '/api/games' });
 await fastify.register(transfersRoutes, { prefix: '/api/transfers' });
+await fastify.register(farmingRoutes, { prefix: '/api/farming' });
+await fastify.register(referralsRoutes, { prefix: '/api/referrals' });
+await fastify.register(shopRoutes, { prefix: '/api/shop' });
 
 // Health check
 fastify.get('/health', async () => {

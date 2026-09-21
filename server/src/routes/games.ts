@@ -18,6 +18,7 @@ import {
   getGameHistory,
   getFavoriteGames,
   toggleFavoriteGame,
+  addReferralEarning,
 } from '../db.js';
 
 export async function gamesRoutes(fastify: FastifyInstance) {
@@ -129,12 +130,17 @@ export async function gamesRoutes(fastify: FastifyInstance) {
 
     try {
       const result = airplaneEngine.claimRound(user.id, roundId);
+      const isWin = result.round.landingSuccess && result.round.finalMultiplier > 0;
+      if (isWin && result.round.payout > result.round.bet) {
+        addReferralEarning(user.id, result.round.payout - result.round.bet, 'game');
+      }
+
       return {
         success: true,
         roundId: result.round.roundId,
         payout: result.round.payout,
         finalMultiplier: result.round.finalMultiplier,
-        isWin: result.round.landingSuccess && result.round.finalMultiplier > 0,
+        isWin,
         balance: result.balance,
         provablyFair: {
           serverSeed: result.round.serverSeed,
@@ -202,6 +208,9 @@ export async function gamesRoutes(fastify: FastifyInstance) {
 
     if (payout > 0) {
       updateUserBalance(user.id, payout);
+      if (payout > betAmount) {
+        addReferralEarning(user.id, payout - betAmount, 'game');
+      }
     }
 
     addGameHistory(
@@ -289,6 +298,9 @@ export async function gamesRoutes(fastify: FastifyInstance) {
 
     if (payout > 0) {
       updateUserBalance(user.id, payout);
+      if (payout > betAmount) {
+        addReferralEarning(user.id, payout - betAmount, 'game');
+      }
     }
 
     addGameHistory(
@@ -363,6 +375,9 @@ export async function gamesRoutes(fastify: FastifyInstance) {
 
     if (payout > 0) {
       updateUserBalance(user.id, payout);
+      if (payout > betAmount) {
+        addReferralEarning(user.id, payout - betAmount, 'game');
+      }
     }
 
     addGameHistory(
@@ -434,6 +449,9 @@ export async function gamesRoutes(fastify: FastifyInstance) {
 
     try {
       const match = pvpWheelManager.selectSector(matchId, user.id, Number(sector));
+      if (match.winnerId && match.winnerId === user.id && match.payout > match.bet) {
+        addReferralEarning(user.id, match.payout - match.bet, 'game');
+      }
       const updatedUser = getUserById(user.id)!;
       return { success: true, match, balance: updatedUser.balance };
     } catch (err: any) {

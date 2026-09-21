@@ -11,6 +11,7 @@ import { useTelegram } from '../../hooks/useTelegram.js';
 interface AirplaneGameProps {
   balance: number;
   onBalanceUpdate: (newBalance: number) => void;
+  planeSkin?: string;
 }
 
 interface Obstacle {
@@ -34,7 +35,7 @@ interface RoundData {
   serverSeedHash?: string;
 }
 
-export const AirplaneGame: React.FC<AirplaneGameProps> = ({ balance, onBalanceUpdate }) => {
+export const AirplaneGame: React.FC<AirplaneGameProps> = ({ balance, onBalanceUpdate, planeSkin }) => {
   const [bet, setBet] = useState(5.0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [flightPhase, setFlightPhase] = useState<'idle' | 'takeoff' | 'flying' | 'landing' | 'result'>('idle');
@@ -208,6 +209,7 @@ export const AirplaneGame: React.FC<AirplaneGameProps> = ({ balance, onBalanceUp
           obstacles={roundData?.obstacles || []}
           landingSuccess={roundData?.landingSuccess ?? true}
           multiplier={displayMultiplier}
+          planeSkin={planeSkin}
           onObstacleHit={handleObstacleHit}
         />
 

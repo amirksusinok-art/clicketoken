@@ -15,6 +15,7 @@ interface Airplane3DSceneProps {
   obstacles: Obstacle3D[];
   landingSuccess: boolean;
   multiplier?: number;
+  planeSkin?: string;
   onObstacleHit?: (obstacleId: string, type: 'ring' | 'rocket') => void;
 }
 
@@ -33,6 +34,7 @@ export const Airplane3DScene: React.FC<Airplane3DSceneProps> = ({
   obstacles,
   landingSuccess,
   multiplier = 1.0,
+  planeSkin = 'default',
   onObstacleHit,
 }) => {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -85,11 +87,56 @@ export const Airplane3DScene: React.FC<Airplane3DSceneProps> = ({
     mountRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
+    // Skin Palette configuration
+    const skinPalettes: Record<string, {
+      fuselage: string;
+      wing: string;
+      cockpit: string;
+      plume: string;
+      trail: string;
+      sunLight: string;
+      metalness: number;
+      roughness: number;
+    }> = {
+      default: {
+        fuselage: '#0284c7',
+        wing: '#0369a1',
+        cockpit: '#38bdf8',
+        plume: '#0ea5e9',
+        trail: '#38bdf8',
+        sunLight: '#38bdf8',
+        metalness: 0.85,
+        roughness: 0.25,
+      },
+      stealth: {
+        fuselage: '#18181b',
+        wing: '#27272a',
+        cockpit: '#a855f7',
+        plume: '#9333ea',
+        trail: '#c084fc',
+        sunLight: '#a855f7',
+        metalness: 0.5,
+        roughness: 0.65,
+      },
+      dragon: {
+        fuselage: '#dc2626',
+        wing: '#991b1b',
+        cockpit: '#facc15',
+        plume: '#ea580c',
+        trail: '#f97316',
+        sunLight: '#f97316',
+        metalness: 0.8,
+        roughness: 0.3,
+      },
+    };
+
+    const palette = skinPalettes[planeSkin] || skinPalettes.default;
+
     // 2. Lighting
     const ambientLight = new THREE.AmbientLight('#ffffff', 0.85);
     scene.add(ambientLight);
 
-    const sunLight = new THREE.DirectionalLight('#38bdf8', 2.2);
+    const sunLight = new THREE.DirectionalLight(palette.sunLight, 2.2);
     sunLight.position.set(20, 40, 30);
     scene.add(sunLight);
 
@@ -104,9 +151,9 @@ export const Airplane3DScene: React.FC<Airplane3DSceneProps> = ({
     const fuselageGeo = new THREE.ConeGeometry(1.0, 4.8, 16);
     fuselageGeo.rotateX(Math.PI / 2);
     const fuselageMat = new THREE.MeshStandardMaterial({
-      color: '#0284c7',
-      roughness: 0.25,
-      metalness: 0.85,
+      color: palette.fuselage,
+      roughness: palette.roughness,
+      metalness: palette.metalness,
     });
     const fuselage = new THREE.Mesh(fuselageGeo, fuselageMat);
     planeGroup.add(fuselage);
@@ -115,7 +162,7 @@ export const Airplane3DScene: React.FC<Airplane3DSceneProps> = ({
     const cockpitGeo = new THREE.SphereGeometry(0.5, 16, 12);
     cockpitGeo.scale(0.8, 0.6, 2.0);
     const cockpitMat = new THREE.MeshPhysicalMaterial({
-      color: '#38bdf8',
+      color: palette.cockpit,
       transmission: 0.65,
       opacity: 0.9,
       transparent: true,
@@ -128,9 +175,9 @@ export const Airplane3DScene: React.FC<Airplane3DSceneProps> = ({
     // Main Delta Wings
     const wingGeo = new THREE.BoxGeometry(6.5, 0.12, 2.2);
     const wingMat = new THREE.MeshStandardMaterial({
-      color: '#0369a1',
-      roughness: 0.35,
-      metalness: 0.75,
+      color: palette.wing,
+      roughness: palette.roughness + 0.1,
+      metalness: palette.metalness - 0.1,
     });
     const wings = new THREE.Mesh(wingGeo, wingMat);
     wings.position.set(0, 0, 0.3);
@@ -162,11 +209,11 @@ export const Airplane3DScene: React.FC<Airplane3DSceneProps> = ({
     const createFlameGroup = () => {
       const group = new THREE.Group();
 
-      // Outer plume (cyan-blue shockwave)
+      // Outer plume (shockwave)
       const plumeGeo = new THREE.ConeGeometry(0.38, 2.4, 12);
       plumeGeo.rotateX(Math.PI / 2);
       const plumeMat = new THREE.MeshBasicMaterial({
-        color: '#0ea5e9',
+        color: palette.plume,
         transparent: true,
         opacity: 0.75,
         blending: THREE.AdditiveBlending,
@@ -205,7 +252,7 @@ export const Airplane3DScene: React.FC<Airplane3DSceneProps> = ({
 
     // 4. Ribbon Trails (Wingtip Contrails)
     const trailMat = new THREE.LineBasicMaterial({
-      color: '#38bdf8',
+      color: palette.trail,
       transparent: true,
       opacity: 0.6,
       blending: THREE.AdditiveBlending,
@@ -313,7 +360,7 @@ export const Airplane3DScene: React.FC<Airplane3DSceneProps> = ({
         rendererRef.current.dispose();
       }
     };
-  }, []);
+  }, [planeSkin]);
 
   // Trigger smoke burst upon rocket collision
   const triggerSmokeBurst = (origin: THREE.Vector3) => {

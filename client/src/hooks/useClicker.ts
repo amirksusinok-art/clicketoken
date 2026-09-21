@@ -12,6 +12,10 @@ export interface UserProfile {
   client_seed: string;
   nonce: number;
   hide_public_balance?: number;
+  mining_level?: number;
+  referral_unclaimed?: number;
+  active_coin_skin?: string;
+  active_plane_skin?: string;
 }
 
 export interface UpgradeConfig {
