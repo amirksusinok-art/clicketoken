@@ -22,14 +22,20 @@ export function getHeaders(): HeadersInit {
 
 export async function apiRequest<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE}${endpoint}`;
+  const method = (options.method || 'GET').toUpperCase();
   const headers = {
     ...getHeaders(),
     ...(options.headers || {}),
   };
 
+  const body = options.body !== undefined
+    ? options.body
+    : (method === 'POST' || method === 'PUT' ? JSON.stringify({}) : undefined);
+
   const response = await fetch(url, {
     ...options,
     headers,
+    body,
   });
 
   const data = await response.json();

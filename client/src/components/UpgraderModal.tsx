@@ -43,6 +43,7 @@ export const UpgraderModal: React.FC<UpgraderModalProps> = ({
         nextUpgrade: UpgradeConfig | null;
       }>('/api/user/upgrade', {
         method: 'POST',
+        body: JSON.stringify({}),
       });
 
       if (res.success) {

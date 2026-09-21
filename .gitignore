@@ -25,3 +25,4 @@ server/data/
 Thumbs.db
 .vscode/
 .idea/
+*.bat

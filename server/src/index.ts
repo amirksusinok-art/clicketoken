@@ -28,6 +28,18 @@ await fastify.register(cors, {
   allowedHeaders: ['Content-Type', 'x-telegram-init-data', 'x-dev-user-id'],
 });
 
+// Allow empty JSON bodies without throwing 400
+fastify.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+  try {
+    const str = typeof body === 'string' ? body.trim() : '';
+    const json = str.length > 0 ? JSON.parse(str) : {};
+    done(null, json);
+  } catch (err: any) {
+    err.statusCode = 400;
+    done(err, undefined);
+  }
+});
+
 // Register API Routes
 await fastify.register(userRoutes, { prefix: '/api/user' });
 await fastify.register(gamesRoutes, { prefix: '/api/games' });
