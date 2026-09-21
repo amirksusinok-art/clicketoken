@@ -9,13 +9,13 @@ import {
   Star,
   Sparkles,
   Coins,
-  Disc3,
+  Ticket,
   User as UserIcon,
 } from 'lucide-react';
 import { CrashGame } from './CrashGame.js';
 import { PenaltyGame } from './PenaltyGame.js';
 import { CoinFlipGame } from './CoinFlipGame.js';
-import { MiniRouletteGame } from './MiniRouletteGame.js';
+import { ScratchGame } from './ScratchGame.js';
 import { HiLoGame } from './HiLoGame.js';
 import { PlinkoGame } from './PlinkoGame.js';
 import { WheelPvpGame } from './WheelPvpGame.js';
@@ -31,7 +31,7 @@ interface MiniGamesModalProps {
   onBalanceUpdate: (newBalance: number) => void;
 }
 
-type GameType = 'crash' | 'penalty' | 'coinflip' | 'roulette' | 'plinko' | 'wheel_pvp' | 'hilo';
+type GameType = 'crash' | 'penalty' | 'coinflip' | 'scratch' | 'plinko' | 'wheel_pvp' | 'hilo';
 type FilterType = 'all' | 'popular' | 'fast';
 
 interface GameItem {
@@ -81,14 +81,14 @@ const GAMES: GameItem[] = [
     category: ['all', 'popular', 'fast'],
   },
   {
-    id: 'roulette',
-    title: 'Мини-Рулетка',
-    subtitle: '• 12 номеров + Зеро • до ×12',
+    id: 'scratch',
+    title: 'Скретч-карты',
+    subtitle: '• Сотри и выиграй • до ×500',
     badge: '• HOT',
-    badgeColor: 'text-emerald-400 bg-emerald-500/20 border-emerald-500/40',
-    icon: Disc3,
+    badgeColor: 'text-amber-400 bg-amber-500/20 border-amber-500/40',
+    icon: Ticket,
     coverImage: '/games/cover_cases.jpg',
-    gradient: 'from-emerald-950/80 via-slate-900 to-teal-950/60',
+    gradient: 'from-amber-950/80 via-slate-900 to-yellow-950/60',
     category: ['all', 'popular', 'fast'],
   },
   {
@@ -286,7 +286,7 @@ export const MiniGamesModal: React.FC<MiniGamesModalProps> = ({
               </div>
             )}
 
-            {activeGame === 'roulette' && (
+            {activeGame === 'scratch' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
                   <button
@@ -296,12 +296,12 @@ export const MiniGamesModal: React.FC<MiniGamesModalProps> = ({
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                   <h1 className="text-base font-black tracking-widest text-white uppercase font-mono flex items-center gap-1.5">
-                    <Disc3 className="w-4 h-4 text-emerald-400" />
-                    МИНИ-РУЛЕТКА
+                    <Ticket className="w-4 h-4 text-amber-400" />
+                    СКРЕТЧ-КАРТЫ
                   </h1>
                   <div className="w-8" />
                 </div>
-                <MiniRouletteGame balance={balance} onBalanceUpdate={onBalanceUpdate} />
+                <ScratchGame balance={balance} onBalanceUpdate={onBalanceUpdate} />
               </div>
             )}
           </div>

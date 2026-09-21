@@ -6,6 +6,7 @@ import { penaltyEngine } from '../penaltyEngine.js';
 import { casesEngine } from '../casesEngine.js';
 import { coinFlipEngine } from '../coinflipEngine.js';
 import { rouletteEngine } from '../rouletteEngine.js';
+import { scratchEngine } from '../scratchEngine.js';
 import {
   generateServerSeed,
   hashServerSeed,
@@ -191,6 +192,24 @@ export async function gamesRoutes(fastify: FastifyInstance) {
       return res;
     } catch (err: any) {
       return reply.status(400).send({ error: err.message || 'Ошибка игры в Рулетку' });
+    }
+  });
+
+  // Scratch & Win Game (Скретч-карты)
+  fastify.get('/scratch/catalog', async () => {
+    return { success: true, tiers: scratchEngine.getCatalog() };
+  });
+
+  fastify.post('/scratch/buy', async (req, reply) => {
+    const user = await authenticateRequest(req, reply);
+    if (!user) return reply.status(401).send({ error: 'Unauthorized' });
+
+    const { tierId } = (req.body as { tierId?: string }) || {};
+    try {
+      const res = scratchEngine.buyTicket(user.id, tierId || 'bronze');
+      return { success: true, ...res };
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message || 'Ошибка покупки скретч-билета' });
     }
   });
 

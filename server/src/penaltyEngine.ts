@@ -100,21 +100,28 @@ export class PenaltyEngine {
     }
 
     // Provably fair calculation:
-    // With 48% probability keeper makes a save (dives directly to targetZone).
-    // With 52% probability player scores a goal (keeper dives to one of the other 4 zones).
     const seedCombo = `${round.serverSeed}:${round.currentStep}:${targetZone}`;
     const hash = crypto.createHash('sha256').update(seedCombo).digest('hex');
     const rollPercent = (parseInt(hash.substring(0, 8), 16) % 10000) / 100; // 0.00 to 99.99
 
+    // Progressive difficulty: Goalkeeper reaction sharpens on each step of the 5-shot series!
+    // Step 0 (Shot 1): 40% save chance
+    // Step 1 (Shot 2): 48% save chance
+    // Step 2 (Shot 3): 58% save chance
+    // Step 3 (Shot 4): 68% save chance
+    // Step 4 (Shot 5): 75% save chance (Golden Goal Showdown)
+    const SAVE_CHANCES = [40.0, 48.0, 58.0, 68.0, 75.0];
+    const saveChance = SAVE_CHANCES[Math.min(round.currentStep, SAVE_CHANCES.length - 1)];
+
     let keeperZone: number;
     let isGoal: boolean;
 
-    if (rollPercent < 48.0) {
-      // 48% chance: Goalkeeper saves the shot
+    if (rollPercent < saveChance) {
+      // Goalkeeper saves the shot
       keeperZone = targetZone;
       isGoal = false;
     } else {
-      // 52% chance: Goal scored! Keeper dives into one of the other 4 zones
+      // Goal scored! Keeper dives into one of the other 4 zones
       const otherRoll = parseInt(hash.substring(8, 16), 16);
       const otherZones = [0, 1, 2, 3, 4].filter((z) => z !== targetZone);
       keeperZone = otherZones[otherRoll % otherZones.length];

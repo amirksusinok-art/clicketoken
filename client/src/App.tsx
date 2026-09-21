@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Gamepad2, Users, Zap, ShieldCheck, AlertCircle, Cpu, Gift, Palette, Vault, Flame } from 'lucide-react';
+import { Gamepad2, Users, Zap, ShieldCheck, AlertCircle, Cpu, Gift, Palette, Vault, Flame, Send } from 'lucide-react';
 import { Header } from './components/Header.js';
 import { Coin } from './components/Coin.js';
 import { UpgraderModal } from './components/UpgraderModal.js';
@@ -124,8 +124,10 @@ export function App() {
     );
   }
 
+  const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-[#090c14] text-slate-100 flex flex-col justify-between max-w-md mx-auto relative overflow-hidden select-none pb-4">
+    <div className="min-h-screen bg-[#090c14] text-slate-100 flex flex-col justify-between max-w-md mx-auto relative overflow-hidden select-none pb-20">
       {/* Top Header */}
       <Header
         profile={profile}
@@ -141,161 +143,49 @@ export function App() {
         </div>
       )}
 
-      {/* Main Screen Content */}
-      <main className="flex-1 flex flex-col items-center justify-between px-4 pt-2">
-        {/* Top: ВАШ СЧЕТ (Matching Screenshot 2 with Animated Number) */}
+      {/* Main Screen Content (Clean Notcoin / Blum Style) */}
+      <main className="flex-1 flex flex-col items-center justify-between px-4 pt-3 pb-2">
+        {/* Top: ВАШ СЧЕТ & Income Pill */}
         <div className="flex flex-col items-center text-center mt-1">
-          <span className="text-[11px] uppercase font-bold tracking-[0.2em] text-slate-400">
+          <span className="text-[11px] uppercase font-bold tracking-[0.25em] text-slate-400">
             ВАШ СЧЕТ
           </span>
           <div className="flex items-center gap-2 mt-1">
             <div className="text-4xl sm:text-5xl font-black text-white font-sans tracking-tight">
               <AnimatedNumber value={displayBalance} />
             </div>
-            <span className="w-8 h-8 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-slate-950 font-black text-base shadow-md shadow-amber-500/30">
+            <span className="w-9 h-9 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 flex items-center justify-center text-slate-950 font-black text-base shadow-lg shadow-amber-500/30">
               🪙
             </span>
           </div>
 
-          {/* Current Income per Tap Pill */}
-          <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/80 border border-white/5 shadow-inner">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[11px] font-semibold text-slate-300">
-              +{(profile?.earn_per_click ?? 0.00001) >= 1
-                ? profile?.earn_per_click
-                : (profile?.earn_per_click ?? 0.00001) < 0.01
-                ? (profile?.earn_per_click ?? 0.00001).toFixed(5)
-                : (profile?.earn_per_click ?? 0.00001).toFixed(3)}{' '}
-              за тап
-            </span>
-          </div>
-
-          {/* Featured Quick Actions: Staking Vault & 7-Day Streak */}
-          <div className="w-full grid grid-cols-2 gap-2 mt-2.5">
-            <button
-              onClick={openStaking}
-              className="py-2 px-3 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-teal-950/60 to-slate-900 border border-emerald-500/40 hover:border-emerald-400 flex items-center justify-between transition active:scale-95 cursor-pointer shadow-lg shadow-emerald-950/40 group"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition">
-                  <Vault className="w-4 h-4" />
-                </div>
-                <div className="text-left">
-                  <div className="text-[11px] font-black text-white leading-tight">Сейф</div>
-                  <div className="text-[9px] text-emerald-400/80 font-semibold">Стейкинг</div>
-                </div>
-              </div>
-              <span className="text-[10px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-lg font-mono font-bold border border-emerald-500/30">
-                +30%
+          {/* Income & Bonus Badges Row */}
+          <div className="mt-2.5 flex items-center gap-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/80 border border-white/5 shadow-inner">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[11px] font-semibold text-slate-300">
+                +{(profile?.earn_per_click ?? 0.00001) >= 1
+                  ? profile?.earn_per_click
+                  : (profile?.earn_per_click ?? 0.00001) < 0.01
+                  ? (profile?.earn_per_click ?? 0.00001).toFixed(5)
+                  : (profile?.earn_per_click ?? 0.00001).toFixed(3)}{' '}
+                за тап
               </span>
-            </button>
+            </div>
 
+            {/* Daily Streak Indicator */}
             <button
               onClick={openDaily}
-              className="py-2 px-3 rounded-2xl bg-gradient-to-r from-amber-950/80 via-orange-950/60 to-slate-900 border border-amber-500/40 hover:border-amber-400 flex items-center justify-between transition active:scale-95 cursor-pointer shadow-lg shadow-amber-950/40 group"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-bold hover:bg-amber-500/20 active:scale-95 transition cursor-pointer"
             >
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition">
-                  <Flame className="w-4 h-4 animate-bounce" />
-                </div>
-                <div className="text-left">
-                  <div className="text-[11px] font-black text-white leading-tight">7 Дней</div>
-                  <div className="text-[9px] text-amber-400/80 font-semibold">Стрик наград</div>
-                </div>
-              </div>
-              <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/20 text-amber-300 rounded-lg font-mono font-bold border border-amber-500/30">
-                {(profile?.daily_streak ?? 0) > 0 ? `${profile?.daily_streak}д 🔥` : 'Бонус'}
-              </span>
-            </button>
-          </div>
-
-          {/* Secondary Quick Action Systems: Farming, Referrals 2.0, Skins */}
-          <div className="w-full flex items-center justify-center gap-2 mt-2">
-            <button
-              onClick={openFarming}
-              className="flex-1 py-1.5 px-2 rounded-xl bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-500/30 hover:border-emerald-400 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-md group"
-            >
-              <Cpu className="w-3.5 h-3.5 text-emerald-400 group-hover:rotate-12 transition" />
-              <span className="text-[11px] font-bold text-emerald-300">Ферма</span>
-              {(profile?.mining_level ?? 0) > 0 && (
-                <span className="text-[9px] px-1 py-0.2 bg-emerald-500/20 text-emerald-300 rounded font-mono font-bold">
-                  L{profile?.mining_level}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={openReferrals}
-              className="flex-1 py-1.5 px-2 rounded-xl bg-gradient-to-r from-blue-950/60 to-indigo-950/60 border border-blue-500/30 hover:border-blue-400 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-md group relative"
-            >
-              <Gift className="w-3.5 h-3.5 text-blue-400 group-hover:scale-110 transition" />
-              <span className="text-[11px] font-bold text-blue-300">Рефералы</span>
-              {(profile?.referral_unclaimed ?? 0) > 0 && (
-                <span className="text-[9px] px-1.5 py-0.2 bg-amber-500 text-slate-950 rounded-full font-mono font-black animate-pulse">
-                  +{(profile?.referral_unclaimed ?? 0).toFixed(1)}
-                </span>
-              )}
-            </button>
-
-            <button
-              onClick={openShop}
-              className="flex-1 py-1.5 px-2 rounded-xl bg-gradient-to-r from-purple-950/60 to-pink-950/60 border border-purple-500/30 hover:border-purple-400 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-md group"
-            >
-              <Palette className="w-3.5 h-3.5 text-purple-400 group-hover:rotate-12 transition" />
-              <span className="text-[11px] font-bold text-purple-300">Скины</span>
+              <Flame className="w-3.5 h-3.5 text-amber-400 fill-amber-400/30 animate-bounce" />
+              <span>{(profile?.daily_streak ?? 0) > 0 ? `${profile?.daily_streak} дн.` : 'Бонус'}</span>
             </button>
           </div>
         </div>
 
-        {/* Middle: Menu Cards Grid (Matching Screenshot 2 Cards Style) */}
-        <div className="w-full grid grid-cols-4 gap-2.5 my-2.5">
-          {/* Card 1: Игры (Pink/Magenta Icon) */}
-          <button
-            onClick={openGames}
-            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#121622] border border-white/5 hover:border-pink-500/40 hover:bg-[#161d2c] transition-all transform active:scale-95 cursor-pointer shadow-lg group"
-          >
-            <div className="w-11 h-11 rounded-2xl bg-[#2a1329] border border-pink-500/30 flex items-center justify-center text-pink-400 shadow-md group-hover:scale-105 transition">
-              <Gamepad2 className="w-5 h-5" />
-            </div>
-            <span className="text-xs font-bold text-slate-200 mt-2">Игры</span>
-          </button>
-
-          {/* Card 2: Друзья (Blue Icon) */}
-          <button
-            onClick={openFriends}
-            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#121622] border border-white/5 hover:border-blue-500/40 hover:bg-[#161d2c] transition-all transform active:scale-95 cursor-pointer shadow-lg group"
-          >
-            <div className="w-11 h-11 rounded-2xl bg-[#0f1f3d] border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-md group-hover:scale-105 transition">
-              <Users className="w-5 h-5" />
-            </div>
-            <span className="text-xs font-bold text-slate-200 mt-2">Друзья</span>
-          </button>
-
-          {/* Card 3: Upgrader (Orange/Amber Icon) */}
-          <button
-            onClick={openUpgrader}
-            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#121622] border border-white/5 hover:border-amber-500/40 hover:bg-[#161d2c] transition-all transform active:scale-95 cursor-pointer shadow-lg group"
-          >
-            <div className="w-11 h-11 rounded-2xl bg-[#2a1d0f] border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-md group-hover:scale-105 transition">
-              <Zap className="w-5 h-5" />
-            </div>
-            <span className="text-xs font-bold text-slate-200 mt-2">Upgrader</span>
-          </button>
-
-          {/* Card 4: Честность (Green/Cyan Shield Icon) */}
-          <button
-            onClick={openFair}
-            className="flex flex-col items-center justify-center p-3 rounded-2xl bg-[#121622] border border-white/5 hover:border-emerald-500/40 hover:bg-[#161d2c] transition-all transform active:scale-95 cursor-pointer shadow-lg group"
-          >
-            <div className="w-11 h-11 rounded-2xl bg-[#0e2722] border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-md group-hover:scale-105 transition">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <span className="text-xs font-bold text-slate-200 mt-2">Честность</span>
-          </button>
-        </div>
-
-        {/* Bottom: Big Interactive Golden Coin */}
-        <div className="w-full flex-1 flex items-center justify-center py-2">
+        {/* Center Stage: Hero Interactive Coin */}
+        <div className="w-full flex-1 flex items-center justify-center py-6">
           <Coin
             earnPerClick={profile?.earn_per_click || 0.001}
             onTap={handleTap}
@@ -303,6 +193,228 @@ export function App() {
           />
         </div>
       </main>
+
+      {/* Sleek Bottom Navigation Dock (Telegram WebApp Native Style) */}
+      <nav className="fixed bottom-0 inset-x-0 max-w-md mx-auto z-40 px-3 pb-3 pt-1 pointer-events-auto">
+        <div className="w-full bg-[#0d1322]/95 backdrop-blur-2xl border border-white/10 rounded-2xl p-1.5 shadow-2xl shadow-black/80 flex items-center justify-around">
+          {/* Tab 1: Игры (Games) */}
+          <button
+            onClick={openGames}
+            className="flex-1 py-1.5 flex flex-col items-center justify-center rounded-xl hover:bg-white/5 active:scale-95 transition cursor-pointer group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-pink-500/15 border border-pink-500/30 flex items-center justify-center text-pink-400 group-hover:scale-105 transition shadow-sm">
+              <Gamepad2 className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-bold text-slate-300 mt-1">Игры</span>
+          </button>
+
+          {/* Tab 2: Ферма (Farm) */}
+          <button
+            onClick={openFarming}
+            className="flex-1 py-1.5 flex flex-col items-center justify-center rounded-xl hover:bg-white/5 active:scale-95 transition cursor-pointer group relative"
+          >
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition shadow-sm">
+              <Cpu className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-bold text-slate-300 mt-1">Ферма</span>
+            {(profile?.mining_level ?? 0) > 0 && (
+              <span className="absolute top-1 right-2 px-1 py-0.2 bg-emerald-500 text-slate-950 rounded text-[8px] font-mono font-black">
+                L{profile?.mining_level}
+              </span>
+            )}
+          </button>
+
+          {/* Tab 3: Буст (Upgrader) */}
+          <button
+            onClick={openUpgrader}
+            className="flex-1 py-1.5 flex flex-col items-center justify-center rounded-xl hover:bg-white/5 active:scale-95 transition cursor-pointer group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition shadow-sm">
+              <Zap className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-bold text-slate-300 mt-1">Буст</span>
+          </button>
+
+          {/* Tab 4: Друзья (Friends & Referrals) */}
+          <button
+            onClick={openFriends}
+            className="flex-1 py-1.5 flex flex-col items-center justify-center rounded-xl hover:bg-white/5 active:scale-95 transition cursor-pointer group relative"
+          >
+            <div className="w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:scale-105 transition shadow-sm">
+              <Users className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-bold text-slate-300 mt-1">Друзья</span>
+            {(profile?.referral_unclaimed ?? 0) > 0 && (
+              <span className="absolute top-1 right-2 px-1.5 py-0.2 bg-amber-500 text-slate-950 rounded-full text-[8px] font-mono font-black animate-pulse">
+                +{(profile?.referral_unclaimed ?? 0).toFixed(0)}
+              </span>
+            )}
+          </button>
+
+          {/* Tab 5: Ещё (More Services) */}
+          <button
+            onClick={() => setIsMenuDrawerOpen(true)}
+            className="flex-1 py-1.5 flex flex-col items-center justify-center rounded-xl hover:bg-white/5 active:scale-95 transition cursor-pointer group relative"
+          >
+            <div className="w-9 h-9 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 group-hover:scale-105 transition shadow-sm">
+              <Vault className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-bold text-slate-300 mt-1">Ещё</span>
+            <span className="absolute top-1 right-3 w-2 h-2 rounded-full bg-purple-400 ring-2 ring-[#0d1322]" />
+          </button>
+        </div>
+      </nav>
+
+      {/* Quick Menu Drawer / Sheet */}
+      {isMenuDrawerOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-sm p-3 animate-in fade-in duration-200">
+          <div className="w-full max-w-sm bg-[#0d1322] border border-white/10 rounded-3xl p-4 shadow-2xl space-y-3 animate-in slide-in-from-bottom duration-200">
+            <div className="flex items-center justify-between pb-2 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-black text-white uppercase tracking-wider">Сервисы и Бонусы</span>
+              </div>
+              <button
+                onClick={() => setIsMenuDrawerOpen(false)}
+                className="w-7 h-7 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {/* Staking Vault */}
+              <button
+                onClick={() => {
+                  setIsMenuDrawerOpen(false);
+                  openStaking();
+                }}
+                className="w-full p-2.5 rounded-2xl bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-500/30 hover:border-emerald-400 flex items-center justify-between transition cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <Vault className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-white">Сейф (Стейкинг)</div>
+                    <div className="text-[10px] text-slate-400">До +30% пассивного дохода</div>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-500/30">
+                  +30%
+                </span>
+              </button>
+
+              {/* 7-Day Streak */}
+              <button
+                onClick={() => {
+                  setIsMenuDrawerOpen(false);
+                  openDaily();
+                }}
+                className="w-full p-2.5 rounded-2xl bg-gradient-to-r from-amber-950/60 to-slate-900 border border-amber-500/30 hover:border-amber-400 flex items-center justify-between transition cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                    <Flame className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-white">7 Дней Стрик</div>
+                    <div className="text-[10px] text-slate-400">Ежедневный бонус за вход</div>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/30">
+                  {(profile?.daily_streak ?? 0) > 0 ? `${profile?.daily_streak}д 🔥` : 'Бонус'}
+                </span>
+              </button>
+
+              {/* Skins Wardrobe */}
+              <button
+                onClick={() => {
+                  setIsMenuDrawerOpen(false);
+                  openShop();
+                }}
+                className="w-full p-2.5 rounded-2xl bg-gradient-to-r from-purple-950/60 to-slate-900 border border-purple-500/30 hover:border-purple-400 flex items-center justify-between transition cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
+                    <Palette className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-white">Магазин скинов</div>
+                    <div className="text-[10px] text-slate-400">Скины для монеты и ракеты</div>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-purple-400">Скины</span>
+              </button>
+
+              {/* Referrals 2.0 */}
+              <button
+                onClick={() => {
+                  setIsMenuDrawerOpen(false);
+                  openReferrals();
+                }}
+                className="w-full p-2.5 rounded-2xl bg-gradient-to-r from-amber-950/60 to-slate-900 border border-amber-500/30 hover:border-amber-400 flex items-center justify-between transition cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                    <Gift className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-white">Рефералы 2.0</div>
+                    <div className="text-[10px] text-slate-400">Приглашай друзей и получай %</div>
+                  </div>
+                </div>
+                {(profile?.referral_unclaimed ?? 0) > 0 ? (
+                  <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/20 px-2 py-0.5 rounded-lg border border-amber-500/30 animate-pulse">
+                    +{(profile?.referral_unclaimed ?? 0).toFixed(1)} Т
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold text-amber-400">Бонус</span>
+                )}
+              </button>
+
+              {/* Transfers */}
+              <button
+                onClick={() => {
+                  setIsMenuDrawerOpen(false);
+                  openTransfers();
+                }}
+                className="w-full p-2.5 rounded-2xl bg-gradient-to-r from-blue-950/60 to-slate-900 border border-blue-500/30 hover:border-blue-400 flex items-center justify-between transition cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                    <Send className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-white">Переводы игрокам</div>
+                    <div className="text-[10px] text-slate-400">Мгновенно по юзернейму</div>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-blue-400">Перевод</span>
+              </button>
+
+              {/* Provably Fair */}
+              <button
+                onClick={() => {
+                  setIsMenuDrawerOpen(false);
+                  openFair();
+                }}
+                className="w-full p-2.5 rounded-2xl bg-gradient-to-r from-cyan-950/60 to-slate-900 border border-cyan-500/30 hover:border-cyan-400 flex items-center justify-between transition cursor-pointer text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-black text-white">Честность (Fair)</div>
+                    <div className="text-[10px] text-slate-400">Криптографическая проверка SHA-256</div>
+                  </div>
+                </div>
+                <span className="text-[10px] font-mono text-cyan-400">SHA-256</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modals */}
       <ProfileModal
