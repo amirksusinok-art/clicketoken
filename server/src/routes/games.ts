@@ -4,6 +4,8 @@ import { crashEngine } from '../crashEngine.js';
 import { pvpWheelManager } from '../pvpWheelEngine.js';
 import { penaltyEngine } from '../penaltyEngine.js';
 import { casesEngine } from '../casesEngine.js';
+import { coinFlipEngine } from '../coinflipEngine.js';
+import { rouletteEngine } from '../rouletteEngine.js';
 import {
   generateServerSeed,
   hashServerSeed,
@@ -150,6 +152,45 @@ export async function gamesRoutes(fastify: FastifyInstance) {
       return res;
     } catch (err: any) {
       return reply.status(400).send({ error: err.message || 'Ошибка вывода' });
+    }
+  });
+
+  // CoinFlip Game (Орёл или Решка)
+  fastify.post('/coinflip/play', async (req, reply) => {
+    const user = await authenticateRequest(req, reply);
+    if (!user) return reply.status(401).send({ error: 'Unauthorized' });
+
+    const { bet, choice } = (req.body as { bet?: number; choice?: 'heads' | 'tails' }) || {};
+    try {
+      const res = coinFlipEngine.play(user.id, Number(bet || 0), choice as any);
+      return res;
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message || 'Ошибка игры в CoinFlip' });
+    }
+  });
+
+  // Mini Roulette Game (12 секторов + Зеро)
+  fastify.post('/roulette/play', async (req, reply) => {
+    const user = await authenticateRequest(req, reply);
+    if (!user) return reply.status(401).send({ error: 'Unauthorized' });
+
+    const { bet, betType, targetNumber } =
+      (req.body as {
+        bet?: number;
+        betType?: any;
+        targetNumber?: number;
+      }) || {};
+
+    try {
+      const res = rouletteEngine.play(
+        user.id,
+        Number(bet || 0),
+        betType,
+        targetNumber !== undefined ? Number(targetNumber) : undefined
+      );
+      return res;
+    } catch (err: any) {
+      return reply.status(400).send({ error: err.message || 'Ошибка игры в Рулетку' });
     }
   });
 

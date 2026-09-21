@@ -136,6 +136,8 @@ safeAddCol(`ALTER TABLE users ADD COLUMN active_plane_skin TEXT DEFAULT 'default
 safeAddCol(`ALTER TABLE users ADD COLUMN last_storage_notified_at INTEGER DEFAULT 0;`);
 safeAddCol(`ALTER TABLE users ADD COLUMN daily_streak INTEGER DEFAULT 0;`);
 safeAddCol(`ALTER TABLE users ADD COLUMN last_daily_claim_at INTEGER DEFAULT 0;`);
+safeAddCol(`ALTER TABLE users ADD COLUMN has_golden_license INTEGER DEFAULT 0;`);
+safeAddCol(`ALTER TABLE users ADD COLUMN last_golden_farm_claim_at INTEGER DEFAULT 0;`);
 
 export interface UserRow {
   id: number;
@@ -157,6 +159,8 @@ export interface UserRow {
   last_storage_notified_at?: number;
   daily_streak?: number;
   last_daily_claim_at?: number;
+  has_golden_license?: number;
+  last_golden_farm_claim_at?: number;
   created_at: number;
   last_click_at: number;
 }
@@ -641,6 +645,137 @@ export function checkFullFarmsAndNotify(notifyCallback: (userId: number) => void
       notifyCallback(u.id);
     }
   }
+}
+
+// ----------------------------------------------------
+// Golden Miner License (ASIC Industrial Farm)
+// ----------------------------------------------------
+export const GOLDEN_LICENSE_CONFIG = {
+  cost: 2000.0,
+  earnPerHour: 100.0,
+  storageHours: 24,
+  requiredMiningLevel: 6, // Quantum Rig 9000
+  title: 'ASIC Дата-центр (Золотая лицензия)',
+  description: 'Промышленный закрытый ангар с мощными ASIC-стойками. Пассивный доход 100 T/час и автономная работа 24 часа.',
+};
+
+export function getGoldenMiningState(userId: number) {
+  const user = getUserById(userId);
+  if (!user) return null;
+
+  const hasLicense = (user.has_golden_license || 0) === 1;
+  const currentMiningLevel = user.mining_level || 0;
+  const canUnlock = currentMiningLevel >= GOLDEN_LICENSE_CONFIG.requiredMiningLevel;
+
+  if (!hasLicense) {
+    return {
+      hasLicense: false,
+      canUnlock,
+      cost: GOLDEN_LICENSE_CONFIG.cost,
+      earnPerHour: GOLDEN_LICENSE_CONFIG.earnPerHour,
+      storageHours: GOLDEN_LICENSE_CONFIG.storageHours,
+      requiredMiningLevel: GOLDEN_LICENSE_CONFIG.requiredMiningLevel,
+      accumulated: 0,
+      maxStorageTokens: GOLDEN_LICENSE_CONFIG.storageHours * GOLDEN_LICENSE_CONFIG.earnPerHour,
+      storageFullPercent: 0,
+      storageTimeLeftSec: 0,
+    };
+  }
+
+  const now = Date.now();
+  const lastClaim = user.last_golden_farm_claim_at || now;
+  const elapsedMs = Math.max(0, now - lastClaim);
+  const maxStorageMs = GOLDEN_LICENSE_CONFIG.storageHours * 3600 * 1000;
+  const effectiveMs = Math.min(elapsedMs, maxStorageMs);
+
+  const accumulated = Math.round((effectiveMs / (3600 * 1000)) * GOLDEN_LICENSE_CONFIG.earnPerHour * 10000) / 10000;
+  const maxStorageTokens = GOLDEN_LICENSE_CONFIG.storageHours * GOLDEN_LICENSE_CONFIG.earnPerHour;
+  const storageFullPercent = Math.min(100, Math.round((effectiveMs / maxStorageMs) * 100));
+  const storageTimeLeftSec = Math.max(0, Math.round((maxStorageMs - effectiveMs) / 1000));
+
+  return {
+    hasLicense: true,
+    canUnlock: true,
+    cost: GOLDEN_LICENSE_CONFIG.cost,
+    earnPerHour: GOLDEN_LICENSE_CONFIG.earnPerHour,
+    storageHours: GOLDEN_LICENSE_CONFIG.storageHours,
+    requiredMiningLevel: GOLDEN_LICENSE_CONFIG.requiredMiningLevel,
+    accumulated,
+    maxStorageTokens,
+    storageFullPercent,
+    storageTimeLeftSec,
+    lastClaimAt: lastClaim,
+  };
+}
+
+export function buyGoldenLicense(userId: number): {
+  success: boolean;
+  newBalance: number;
+  error?: string;
+} {
+  const user = getUserById(userId);
+  if (!user) return { success: false, newBalance: 0, error: 'Пользователь не найден' };
+
+  if ((user.has_golden_license || 0) === 1) {
+    return { success: false, newBalance: user.balance, error: 'Золотая лицензия уже приобретена' };
+  }
+
+  if ((user.mining_level || 0) < GOLDEN_LICENSE_CONFIG.requiredMiningLevel) {
+    return {
+      success: false,
+      newBalance: user.balance,
+      error: `Для покупки требуется 6-й уровень фермы (Quantum Rig 9000)`,
+    };
+  }
+
+  if (user.balance < GOLDEN_LICENSE_CONFIG.cost) {
+    return {
+      success: false,
+      newBalance: user.balance,
+      error: `Недостаточно токенов. Требуется ${GOLDEN_LICENSE_CONFIG.cost} Т`,
+    };
+  }
+
+  const now = Date.now();
+  db.prepare(`
+    UPDATE users
+    SET balance = ROUND(balance - ?, 4),
+        has_golden_license = 1,
+        last_golden_farm_claim_at = ?
+    WHERE id = ?
+  `).run(GOLDEN_LICENSE_CONFIG.cost, now, userId);
+
+  const updatedUser = getUserById(userId)!;
+  return { success: true, newBalance: updatedUser.balance };
+}
+
+export function claimGoldenMiningReward(userId: number): {
+  success: boolean;
+  claimed: number;
+  newBalance: number;
+  error?: string;
+} {
+  const state = getGoldenMiningState(userId);
+  if (!state || !state.hasLicense) {
+    return { success: false, claimed: 0, newBalance: 0, error: 'Золотая лицензия не активирована' };
+  }
+
+  if (state.accumulated <= 0) {
+    const user = getUserById(userId);
+    return { success: true, claimed: 0, newBalance: user ? user.balance : 0 };
+  }
+
+  const claimed = state.accumulated;
+  const now = Date.now();
+  db.prepare(`
+    UPDATE users
+    SET balance = ROUND(balance + ?, 4),
+        last_golden_farm_claim_at = ?
+    WHERE id = ?
+  `).run(claimed, now, userId);
+
+  const updatedUser = getUserById(userId)!;
+  return { success: true, claimed, newBalance: updatedUser.balance };
 }
 
 // ----------------------------------------------------

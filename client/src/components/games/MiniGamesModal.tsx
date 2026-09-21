@@ -4,18 +4,18 @@ import {
   ChevronRight,
   Rocket,
   Trophy,
-  Package,
   Layers,
   Swords,
   Star,
-  Binary,
   Sparkles,
+  Coins,
+  Disc3,
   User as UserIcon,
 } from 'lucide-react';
 import { CrashGame } from './CrashGame.js';
 import { PenaltyGame } from './PenaltyGame.js';
-import { CasesGame } from './CasesGame.js';
-import { RandomGame } from './RandomGame.js';
+import { CoinFlipGame } from './CoinFlipGame.js';
+import { MiniRouletteGame } from './MiniRouletteGame.js';
 import { HiLoGame } from './HiLoGame.js';
 import { PlinkoGame } from './PlinkoGame.js';
 import { WheelPvpGame } from './WheelPvpGame.js';
@@ -31,7 +31,7 @@ interface MiniGamesModalProps {
   onBalanceUpdate: (newBalance: number) => void;
 }
 
-type GameType = 'crash' | 'penalty' | 'cases' | 'plinko' | 'wheel_pvp' | 'hilo' | 'random';
+type GameType = 'crash' | 'penalty' | 'coinflip' | 'roulette' | 'plinko' | 'wheel_pvp' | 'hilo';
 type FilterType = 'all' | 'popular' | 'fast';
 
 interface GameItem {
@@ -59,13 +59,13 @@ const GAMES: GameItem[] = [
     category: ['all', 'popular', 'fast'],
   },
   {
-    id: 'cases',
-    title: 'Кейсы',
-    subtitle: '• Рулетка дропа • до ×10',
-    badge: '• HOT',
+    id: 'coinflip',
+    title: 'CoinFlip',
+    subtitle: '• Орёл / Решка • ×1.96',
+    badge: '• NEW',
     badgeColor: 'text-amber-400 bg-amber-500/20 border-amber-500/40',
-    icon: Package,
-    coverImage: '/games/cover_cases.jpg',
+    icon: Coins,
+    coverImage: '/games/cover_random.jpg',
     gradient: 'from-amber-950/80 via-slate-900 to-yellow-950/60',
     category: ['all', 'popular', 'fast'],
   },
@@ -78,6 +78,17 @@ const GAMES: GameItem[] = [
     icon: Rocket,
     coverImage: '/games/cover_crash.jpg',
     gradient: 'from-amber-950/60 via-slate-900 to-red-950/50',
+    category: ['all', 'popular', 'fast'],
+  },
+  {
+    id: 'roulette',
+    title: 'Мини-Рулетка',
+    subtitle: '• 12 номеров + Зеро • до ×12',
+    badge: '• HOT',
+    badgeColor: 'text-emerald-400 bg-emerald-500/20 border-emerald-500/40',
+    icon: Disc3,
+    coverImage: '/games/cover_cases.jpg',
+    gradient: 'from-emerald-950/80 via-slate-900 to-teal-950/60',
     category: ['all', 'popular', 'fast'],
   },
   {
@@ -111,17 +122,6 @@ const GAMES: GameItem[] = [
     icon: Sparkles,
     coverImage: '/games/cover_hilo.jpg',
     gradient: 'from-indigo-950/70 via-slate-900 to-violet-950/50',
-    category: ['all', 'fast'],
-  },
-  {
-    id: 'random',
-    title: 'Random',
-    subtitle: '• Кости / Монета • 50/50',
-    badge: '• FAST',
-    badgeColor: 'text-amber-400 bg-amber-500/20 border-amber-500/40',
-    icon: Binary,
-    coverImage: '/games/cover_random.jpg',
-    gradient: 'from-amber-950/70 via-slate-900 to-orange-950/50',
     category: ['all', 'fast'],
   },
 ];
@@ -197,7 +197,7 @@ export const MiniGamesModal: React.FC<MiniGamesModalProps> = ({
               </div>
             )}
 
-            {activeGame === 'cases' && (
+            {activeGame === 'coinflip' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
                   <button
@@ -207,12 +207,12 @@ export const MiniGamesModal: React.FC<MiniGamesModalProps> = ({
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                   <h1 className="text-base font-black tracking-widest text-white uppercase font-mono flex items-center gap-1.5">
-                    <Package className="w-4 h-4 text-amber-400" />
-                    КЕЙСЫ
+                    <Coins className="w-4 h-4 text-amber-400" />
+                    COINFLIP
                   </h1>
                   <div className="w-8" />
                 </div>
-                <CasesGame balance={balance} onBalanceUpdate={onBalanceUpdate} />
+                <CoinFlipGame balance={balance} onBalanceUpdate={onBalanceUpdate} />
               </div>
             )}
 
@@ -286,7 +286,7 @@ export const MiniGamesModal: React.FC<MiniGamesModalProps> = ({
               </div>
             )}
 
-            {activeGame === 'random' && (
+            {activeGame === 'roulette' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between px-1">
                   <button
@@ -295,12 +295,13 @@ export const MiniGamesModal: React.FC<MiniGamesModalProps> = ({
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <h1 className="text-base font-black tracking-widest text-white uppercase font-mono">
-                    RANDOM
+                  <h1 className="text-base font-black tracking-widest text-white uppercase font-mono flex items-center gap-1.5">
+                    <Disc3 className="w-4 h-4 text-emerald-400" />
+                    МИНИ-РУЛЕТКА
                   </h1>
                   <div className="w-8" />
                 </div>
-                <RandomGame balance={balance} onBalanceUpdate={onBalanceUpdate} />
+                <MiniRouletteGame balance={balance} onBalanceUpdate={onBalanceUpdate} />
               </div>
             )}
           </div>

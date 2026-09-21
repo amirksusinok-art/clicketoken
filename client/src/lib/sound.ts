@@ -283,6 +283,18 @@ class SoundManager {
     } catch {}
   }
 
+  public playSuccess() {
+    this.playVictoryFanfare();
+  }
+
+  public playPop() {
+    this.playCaseTick();
+  }
+
+  public playWhoosh() {
+    this.playRingPass();
+  }
+
   // ----------------------------------------------------
   // Procedural Synthwave / Cyberpunk Ambient BGM
   // ----------------------------------------------------

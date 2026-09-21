@@ -99,13 +99,27 @@ export class PenaltyEngine {
       throw new Error('Неверный сектор ворот (от 0 до 4)');
     }
 
-    // Provably fair calculation for goalkeeper dive zone (0..4)
+    // Provably fair calculation:
+    // With 48% probability keeper makes a save (dives directly to targetZone).
+    // With 52% probability player scores a goal (keeper dives to one of the other 4 zones).
     const seedCombo = `${round.serverSeed}:${round.currentStep}:${targetZone}`;
     const hash = crypto.createHash('sha256').update(seedCombo).digest('hex');
-    const roll = parseInt(hash.substring(0, 8), 16);
-    const keeperZone = roll % 5;
+    const rollPercent = (parseInt(hash.substring(0, 8), 16) % 10000) / 100; // 0.00 to 99.99
 
-    const isGoal = targetZone !== keeperZone;
+    let keeperZone: number;
+    let isGoal: boolean;
+
+    if (rollPercent < 48.0) {
+      // 48% chance: Goalkeeper saves the shot
+      keeperZone = targetZone;
+      isGoal = false;
+    } else {
+      // 52% chance: Goal scored! Keeper dives into one of the other 4 zones
+      const otherRoll = parseInt(hash.substring(8, 16), 16);
+      const otherZones = [0, 1, 2, 3, 4].filter((z) => z !== targetZone);
+      keeperZone = otherZones[otherRoll % otherZones.length];
+      isGoal = true;
+    }
 
     round.history.push({
       shotZone: targetZone,

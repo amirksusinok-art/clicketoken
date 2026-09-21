@@ -228,3 +228,93 @@ export function calculatePlinkoResult(
   return { path, bucketIndex, multiplier, hmac };
 }
 
+// ----------------------------------------------------
+// 5. CoinFlip (Орёл или Решка)
+// ----------------------------------------------------
+export function calculateCoinFlipResult(
+  serverSeed: string,
+  clientSeed: string,
+  nonce: number,
+  choice: 'heads' | 'tails'
+): {
+  outcome: 'heads' | 'tails';
+  isWin: boolean;
+  multiplier: number;
+  hmac: string;
+} {
+  const hmac = generateHmac(serverSeed, clientSeed, nonce);
+  const roll = parseInt(hmac.substring(0, 8), 16);
+  const outcome: 'heads' | 'tails' = roll % 2 === 0 ? 'heads' : 'tails';
+  const isWin = outcome === choice;
+  const multiplier = isWin ? 1.96 : 0;
+
+  return { outcome, isWin, multiplier, hmac };
+}
+
+// ----------------------------------------------------
+// 6. Mini Roulette (12 номеров: 0 Зеро, 1..6 Красные, 7..12 Чёрные)
+// ----------------------------------------------------
+export type RouletteBetType = 'red' | 'black' | 'even' | 'odd' | 'number';
+
+export interface RouletteResult {
+  winningNumber: number; // 0..12
+  color: 'green' | 'red' | 'black';
+  isEven: boolean;
+  isOdd: boolean;
+  isWin: boolean;
+  multiplier: number;
+  hmac: string;
+}
+
+export function calculateRouletteResult(
+  serverSeed: string,
+  clientSeed: string,
+  nonce: number,
+  betType: RouletteBetType,
+  targetNumber?: number
+): RouletteResult {
+  const hmac = generateHmac(serverSeed, clientSeed, nonce);
+  const roll = parseInt(hmac.substring(0, 8), 16);
+  const winningNumber = roll % 13; // 0 to 12
+
+  let color: 'green' | 'red' | 'black' = 'green';
+  if (winningNumber >= 1 && winningNumber <= 6) {
+    color = 'red';
+  } else if (winningNumber >= 7 && winningNumber <= 12) {
+    color = 'black';
+  }
+
+  const isEven = winningNumber > 0 && winningNumber % 2 === 0;
+  const isOdd = winningNumber > 0 && winningNumber % 2 !== 0;
+
+  let isWin = false;
+  let multiplier = 0;
+
+  if (betType === 'red' && color === 'red') {
+    isWin = true;
+    multiplier = 2.0;
+  } else if (betType === 'black' && color === 'black') {
+    isWin = true;
+    multiplier = 2.0;
+  } else if (betType === 'even' && isEven) {
+    isWin = true;
+    multiplier = 2.0;
+  } else if (betType === 'odd' && isOdd) {
+    isWin = true;
+    multiplier = 2.0;
+  } else if (betType === 'number' && targetNumber !== undefined && targetNumber === winningNumber) {
+    isWin = true;
+    multiplier = 12.0;
+  }
+
+  return {
+    winningNumber,
+    color,
+    isEven,
+    isOdd,
+    isWin,
+    multiplier,
+    hmac,
+  };
+}
+

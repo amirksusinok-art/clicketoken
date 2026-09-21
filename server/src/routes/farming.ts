@@ -1,6 +1,13 @@
 import { FastifyPluginAsync } from 'fastify';
 import { authenticateRequest } from '../auth.js';
-import { getMiningState, claimMiningReward, upgradeMiningFarm } from '../db.js';
+import {
+  getMiningState,
+  claimMiningReward,
+  upgradeMiningFarm,
+  getGoldenMiningState,
+  buyGoldenLicense,
+  claimGoldenMiningReward,
+} from '../db.js';
 import { VIDEO_CARDS } from '../farmingConfig.js';
 
 export const farmingRoutes: FastifyPluginAsync = async (fastify) => {
@@ -10,9 +17,11 @@ export const farmingRoutes: FastifyPluginAsync = async (fastify) => {
     if (!user) return reply.status(401).send({ error: 'Unauthorized' });
 
     const state = getMiningState(user.id);
+    const goldenState = getGoldenMiningState(user.id);
     return {
       success: true,
       state,
+      goldenState,
       allCards: VIDEO_CARDS,
     };
   });
@@ -50,6 +59,43 @@ export const farmingRoutes: FastifyPluginAsync = async (fastify) => {
       newLevel: result.newLevel,
       balance: result.newBalance,
       state: updatedState,
+    };
+  });
+
+  // Buy Golden Miner License (ASIC Industrial Farm)
+  fastify.post('/buy-license', async (req, reply) => {
+    const user = await authenticateRequest(req, reply);
+    if (!user) return reply.status(401).send({ error: 'Unauthorized' });
+
+    const result = buyGoldenLicense(user.id);
+    if (!result.success) {
+      return reply.status(400).send({ error: result.error || 'Не удалось приобрести лицензию' });
+    }
+
+    const updatedGoldenState = getGoldenMiningState(user.id);
+    return {
+      success: true,
+      balance: result.newBalance,
+      goldenState: updatedGoldenState,
+    };
+  });
+
+  // Claim Golden Mining Reward
+  fastify.post('/claim-golden', async (req, reply) => {
+    const user = await authenticateRequest(req, reply);
+    if (!user) return reply.status(401).send({ error: 'Unauthorized' });
+
+    const result = claimGoldenMiningReward(user.id);
+    if (!result.success) {
+      return reply.status(400).send({ error: result.error || 'Ошибка сбора прибыли' });
+    }
+
+    const updatedGoldenState = getGoldenMiningState(user.id);
+    return {
+      success: true,
+      claimed: result.claimed,
+      balance: result.newBalance,
+      goldenState: updatedGoldenState,
     };
   });
 };
