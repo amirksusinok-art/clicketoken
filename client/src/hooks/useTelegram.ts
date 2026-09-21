@@ -5,16 +5,40 @@ export function useTelegram() {
   const isInsideTelegram = Boolean(tg?.initData);
 
   useEffect(() => {
-    if (tg) {
-      tg.ready();
-      tg.expand();
-      // Set header color to dark background
-      if (tg.setHeaderColor) {
-        tg.setHeaderColor('#0a0d14');
+    try {
+      if (tg) {
+        if (typeof tg.ready === 'function') {
+          try {
+            tg.ready();
+          } catch {}
+        }
+        if (typeof tg.expand === 'function') {
+          try {
+            tg.expand();
+          } catch {}
+        }
+        // Set header color to dark background safely
+        if (typeof tg.setHeaderColor === 'function') {
+          try {
+            tg.setHeaderColor('#0a0d14');
+          } catch {
+            try {
+              tg.setHeaderColor('bg_color');
+            } catch {}
+          }
+        }
+        if (typeof tg.setBackgroundColor === 'function') {
+          try {
+            tg.setBackgroundColor('#0a0d14');
+          } catch {
+            try {
+              tg.setBackgroundColor('bg_color');
+            } catch {}
+          }
+        }
       }
-      if (tg.setBackgroundColor) {
-        tg.setBackgroundColor('#0a0d14');
-      }
+    } catch (e) {
+      console.warn('Telegram WebApp initialization caught:', e);
     }
   }, [tg]);
 

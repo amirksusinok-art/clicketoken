@@ -32,15 +32,27 @@ export async function apiRequest<T = any>(endpoint: string, options: RequestInit
     ? options.body
     : (method === 'POST' || method === 'PUT' ? JSON.stringify({}) : undefined);
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-    body,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers,
+      body,
+    });
+  } catch (netErr: any) {
+    throw new Error(`Ошибка сети: не удалось подключиться к серверу (${netErr.message || 'NetworkError'})`);
+  }
 
-  const data = await response.json();
+  let data: any;
+  const rawText = await response.text();
+  try {
+    data = rawText ? JSON.parse(rawText) : {};
+  } catch {
+    data = { error: rawText && rawText.length < 120 ? rawText : `Ошибка сервера (${response.status} ${response.statusText})` };
+  }
+
   if (!response.ok) {
-    throw new Error(data.error || 'Произошла ошибка при выполнении запроса');
+    throw new Error(data.error || `Ошибка сервера (${response.status})`);
   }
 
   return data as T;

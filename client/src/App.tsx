@@ -27,6 +27,7 @@ export function App() {
     error,
     handleTap,
     flushClicks,
+    fetchProfile,
     updateBalanceDirectly,
     setNextUpgrade,
     setProfile,
@@ -46,6 +47,7 @@ export function App() {
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isStakingOpen, setIsStakingOpen] = useState(false);
   const [isDailyOpen, setIsDailyOpen] = useState(false);
+  const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
   const [prefillRecipient, setPrefillRecipient] = useState<string | undefined>(undefined);
 
   const openUpgrader = () => {
@@ -115,16 +117,31 @@ export function App() {
     setIsProfileOpen(true);
   };
 
-  if (loading && !profile) {
+  if (!profile) {
+    if (loading) {
+      return (
+        <div className="min-h-screen bg-[#090c14] flex flex-col items-center justify-center text-slate-400 gap-3">
+          <div className="w-10 h-10 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs font-semibold tracking-wider uppercase">Загрузка игры Токен...</span>
+        </div>
+      );
+    }
     return (
-      <div className="min-h-screen bg-[#090c14] flex flex-col items-center justify-center text-slate-400 gap-3">
-        <div className="w-10 h-10 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-semibold tracking-wider uppercase">Загрузка игры Токен...</span>
+      <div className="min-h-screen bg-[#090c14] flex flex-col items-center justify-center text-slate-400 gap-4 p-6 text-center">
+        <AlertCircle className="w-12 h-12 text-amber-400 animate-pulse" />
+        <div>
+          <h2 className="text-white font-bold text-base mb-1">Связь с сервером</h2>
+          <p className="text-xs text-slate-400 max-w-xs">{error || 'Не удалось загрузить данные аккаунта. Попробуйте повторить.'}</p>
+        </div>
+        <button
+          onClick={() => fetchProfile()}
+          className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs uppercase tracking-wider rounded-xl transition active:scale-95 cursor-pointer shadow-lg shadow-amber-500/20"
+        >
+          Повторить попытку
+        </button>
       </div>
     );
   }
-
-  const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#090c14] text-slate-100 flex flex-col justify-between max-w-md mx-auto relative overflow-hidden select-none pb-20">
