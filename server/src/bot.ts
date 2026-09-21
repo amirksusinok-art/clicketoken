@@ -1,6 +1,58 @@
 import { Bot, InlineKeyboard } from 'grammy';
 import dotenv from 'dotenv';
+import { checkFullFarmsAndNotify } from './db.js';
+
 dotenv.config();
+
+let botInstance: Bot | null = null;
+
+export function getBot(): Bot | null {
+  return botInstance;
+}
+
+export async function sendPushNotification(
+  userId: number,
+  text: string,
+  buttonText: string = '🪙 Открыть кликер'
+) {
+  if (!botInstance) return;
+  try {
+    const webAppUrl = process.env.WEBAPP_URL || 'http://localhost:5173';
+    const keyboard = new InlineKeyboard().webApp(buttonText, webAppUrl);
+    await botInstance.api.sendMessage(userId, text, {
+      parse_mode: 'Markdown',
+      reply_markup: keyboard,
+    });
+  } catch (err) {
+    // Silently ignore if blocked or cannot send
+  }
+}
+
+export async function notifyStorageFull(userId: number) {
+  await sendPushNotification(
+    userId,
+    `🏭 **Ваша ферма видеокарт заполнилась на 100%!** Токены больше не майнятся. Зайдите и заберите прибыль, чтобы запустить добычу заново!`,
+    '🪙 Забрать прибыль'
+  );
+}
+
+export async function notifyReferralEarning(referrerId: number, friendName: string, amount: number) {
+  const formatted = amount >= 1 ? amount.toFixed(1) : amount.toFixed(3);
+  await sendPushNotification(
+    referrerId,
+    `💸 **Твой друг ${friendName} только что накликал монет** — тебе в реферальный сейф капнуло +${formatted} Т!`,
+    '🪙 Открыть сейф'
+  );
+}
+
+export async function notifyPvpWin(winnerId: number, amount: number) {
+  const formatted = amount >= 1 ? amount.toFixed(1) : amount.toFixed(2);
+  await sendPushNotification(
+    winnerId,
+    `🏆 **Твой соперник прокрутил колесо!** Ты победил и получил +${formatted} Т на баланс!`,
+    '🪙 Открыть кликер'
+  );
+}
 
 export function setupTelegramBot(): Bot | null {
   const token = process.env.BOT_TOKEN;
@@ -13,23 +65,15 @@ export function setupTelegramBot(): Bot | null {
 
   try {
     const bot = new Bot(token);
+    botInstance = bot;
 
+    // Start command: simple welcome message with button per user request
     bot.command('start', async (ctx) => {
-      const keyboard = new InlineKeyboard().webApp('🪙 Запустить игру Токен', webAppUrl);
+      const keyboard = new InlineKeyboard().webApp('🪙 Открыть кликер', webAppUrl);
 
-      await ctx.reply(
-        `👋 **Добро пожаловать в кликер «Токен»!**\n\n` +
-        `🪙 Тапайте по интерактивной монете и накапливайте Токены.\n` +
-        `⚡ Прокачивайте доход за клик в **Upgrader**.\n` +
-        `🎮 Участвуйте в 4 мини-играх: **Crash**, **Самолётик**, **Random**, **Больше/Меньше**.\n` +
-        `💸 Переводите Токены друзьям по @username.\n` +
-        `🔒 Все исходы 100% прозрачны и защищены технологией **Provably Fair** (SHA-256).\n\n` +
-        `Нажмите кнопку ниже, чтобы открыть Mini App:`,
-        {
-          parse_mode: 'Markdown',
-          reply_markup: keyboard,
-        }
-      );
+      await ctx.reply('Добро пожаловать в токен кликер', {
+        reply_markup: keyboard,
+      });
     });
 
     bot.catch((err) => {
@@ -42,6 +86,17 @@ export function setupTelegramBot(): Bot | null {
         console.log(`🤖 Telegram-бот @${botInfo.username} успешно запущен!`);
       },
     });
+
+    // Start background monitor for full farm storage (runs every 60s)
+    setInterval(() => {
+      try {
+        checkFullFarmsAndNotify((fullUserId) => {
+          notifyStorageFull(fullUserId);
+        });
+      } catch (err) {
+        console.error('Ошибка проверки заполнения фермы:', err);
+      }
+    }, 60_000);
 
     return bot;
   } catch (err) {

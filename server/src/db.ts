@@ -119,6 +119,7 @@ safeAddCol(`ALTER TABLE users ADD COLUMN referral_unclaimed REAL DEFAULT 0;`);
 safeAddCol(`ALTER TABLE users ADD COLUMN referred_by INTEGER DEFAULT NULL;`);
 safeAddCol(`ALTER TABLE users ADD COLUMN active_coin_skin TEXT DEFAULT 'default';`);
 safeAddCol(`ALTER TABLE users ADD COLUMN active_plane_skin TEXT DEFAULT 'default';`);
+safeAddCol(`ALTER TABLE users ADD COLUMN last_storage_notified_at INTEGER DEFAULT 0;`);
 
 export interface UserRow {
   id: number;
@@ -137,6 +138,7 @@ export interface UserRow {
   referred_by?: number | null;
   active_coin_skin?: string;
   active_plane_skin?: string;
+  last_storage_notified_at?: number;
   created_at: number;
   last_click_at: number;
 }
@@ -602,19 +604,44 @@ export function upgradeMiningFarm(userId: number): { success: boolean; newLevel:
   return { success: true, newLevel: nextCard.level, newBalance: updatedUser.balance };
 }
 
+export function checkFullFarmsAndNotify(notifyCallback: (userId: number) => void) {
+  const users = db.prepare(`
+    SELECT id, mining_level, last_farm_claim_at, created_at, COALESCE(last_storage_notified_at, 0) as last_storage_notified_at
+    FROM users
+    WHERE mining_level >= 0
+  `).all() as { id: number; mining_level: number; last_farm_claim_at: number; created_at: number; last_storage_notified_at: number }[];
+
+  const now = Date.now();
+  for (const u of users) {
+    const card = getCardByLevel(u.mining_level || 1) || VIDEO_CARDS[0];
+    const storageDurationMs = card.storageHours * 3600 * 1000;
+    const lastClaim = u.last_farm_claim_at || u.created_at || now;
+    const isFull = (now - lastClaim) >= storageDurationMs;
+
+    if (isFull && u.last_storage_notified_at < lastClaim) {
+      db.prepare('UPDATE users SET last_storage_notified_at = ? WHERE id = ?').run(now, u.id);
+      notifyCallback(u.id);
+    }
+  }
+}
+
 // ----------------------------------------------------
 // Referrals 2.0
 // ----------------------------------------------------
 
-export function addReferralEarning(referredId: number, amountEarned: number, type: 'click' | 'game') {
-  if (amountEarned <= 0) return;
+export function addReferralEarning(
+  referredId: number,
+  amountEarned: number,
+  type: 'click' | 'game'
+): { referrerId: number; bonus: number; friendName: string } | null {
+  if (amountEarned <= 0) return null;
   const user = getUserById(referredId);
-  if (!user || !user.referred_by) return;
+  if (!user || !user.referred_by) return null;
 
   const referrerId = user.referred_by;
   const rate = type === 'click' ? 0.10 : 0.05;
   const bonus = Math.round(amountEarned * rate * 10000) / 10000;
-  if (bonus <= 0) return;
+  if (bonus <= 0) return null;
 
   // Credit to referrer safe
   db.prepare('UPDATE users SET referral_unclaimed = ROUND(COALESCE(referral_unclaimed, 0) + ?, 4) WHERE id = ?').run(bonus, referrerId);
@@ -625,6 +652,9 @@ export function addReferralEarning(referredId: number, amountEarned: number, typ
   } else {
     db.prepare('UPDATE referrals SET earned_from_games = ROUND(earned_from_games + ?, 4) WHERE referrer_id = ? AND referred_id = ?').run(bonus, referrerId, referredId);
   }
+
+  const friendName = user.username ? `@${user.username}` : (user.first_name || 'друг');
+  return { referrerId, bonus, friendName };
 }
 
 export function claimReferralEarnings(userId: number): { claimed: number; newBalance: number } {

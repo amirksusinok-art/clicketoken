@@ -16,6 +16,24 @@ import {
   addReferralEarning,
 } from '../db.js';
 import { UPGRADES, getNextUpgrade } from '../upgrades.js';
+import { notifyReferralEarning } from '../bot.js';
+
+// Buffer to throttle referral notifications so we don't hit Telegram rate limits
+const refNotifyBuffer = new Map<number, { friendName: string; accrued: number; lastSent: number }>();
+
+function queueReferralClickNotification(referrerId: number, friendName: string, bonus: number) {
+  const now = Date.now();
+  const entry = refNotifyBuffer.get(referrerId) || { friendName, accrued: 0, lastSent: 0 };
+  entry.accrued += bonus;
+  entry.friendName = friendName;
+
+  if (now - entry.lastSent > 45_000 && entry.accrued >= 0.005) {
+    notifyReferralEarning(referrerId, entry.friendName, entry.accrued);
+    entry.lastSent = now;
+    entry.accrued = 0;
+  }
+  refNotifyBuffer.set(referrerId, entry);
+}
 
 export async function userRoutes(fastify: FastifyInstance) {
   // Get current user profile
@@ -70,7 +88,10 @@ export async function userRoutes(fastify: FastifyInstance) {
     const updatedUser = recordClicksBatch(user.id, verifiedClicks, earned);
 
     // Credit 10% to referrer if user was invited
-    addReferralEarning(user.id, earned, 'click');
+    const refResult = addReferralEarning(user.id, earned, 'click');
+    if (refResult) {
+      queueReferralClickNotification(refResult.referrerId, refResult.friendName, refResult.bonus);
+    }
 
     return {
       success: true,

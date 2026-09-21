@@ -20,6 +20,7 @@ import {
   toggleFavoriteGame,
   addReferralEarning,
 } from '../db.js';
+import { notifyReferralEarning } from '../bot.js';
 
 export async function gamesRoutes(fastify: FastifyInstance) {
   // 1. Crash Multiplayer
@@ -132,7 +133,8 @@ export async function gamesRoutes(fastify: FastifyInstance) {
       const result = airplaneEngine.claimRound(user.id, roundId);
       const isWin = result.round.landingSuccess && result.round.finalMultiplier > 0;
       if (isWin && result.round.payout > result.round.bet) {
-        addReferralEarning(user.id, result.round.payout - result.round.bet, 'game');
+        const refRes = addReferralEarning(user.id, result.round.payout - result.round.bet, 'game');
+        if (refRes) notifyReferralEarning(refRes.referrerId, refRes.friendName, refRes.bonus);
       }
 
       return {
@@ -209,7 +211,8 @@ export async function gamesRoutes(fastify: FastifyInstance) {
     if (payout > 0) {
       updateUserBalance(user.id, payout);
       if (payout > betAmount) {
-        addReferralEarning(user.id, payout - betAmount, 'game');
+        const refRes = addReferralEarning(user.id, payout - betAmount, 'game');
+        if (refRes) notifyReferralEarning(refRes.referrerId, refRes.friendName, refRes.bonus);
       }
     }
 
@@ -299,7 +302,8 @@ export async function gamesRoutes(fastify: FastifyInstance) {
     if (payout > 0) {
       updateUserBalance(user.id, payout);
       if (payout > betAmount) {
-        addReferralEarning(user.id, payout - betAmount, 'game');
+        const refRes = addReferralEarning(user.id, payout - betAmount, 'game');
+        if (refRes) notifyReferralEarning(refRes.referrerId, refRes.friendName, refRes.bonus);
       }
     }
 
@@ -376,7 +380,8 @@ export async function gamesRoutes(fastify: FastifyInstance) {
     if (payout > 0) {
       updateUserBalance(user.id, payout);
       if (payout > betAmount) {
-        addReferralEarning(user.id, payout - betAmount, 'game');
+        const refRes = addReferralEarning(user.id, payout - betAmount, 'game');
+        if (refRes) notifyReferralEarning(refRes.referrerId, refRes.friendName, refRes.bonus);
       }
     }
 
@@ -450,7 +455,8 @@ export async function gamesRoutes(fastify: FastifyInstance) {
     try {
       const match = pvpWheelManager.selectSector(matchId, user.id, Number(sector));
       if (match.winnerId && match.winnerId === user.id && match.payout > match.bet) {
-        addReferralEarning(user.id, match.payout - match.bet, 'game');
+        const refRes = addReferralEarning(user.id, match.payout - match.bet, 'game');
+        if (refRes) notifyReferralEarning(refRes.referrerId, refRes.friendName, refRes.bonus);
       }
       const updatedUser = getUserById(user.id)!;
       return { success: true, match, balance: updatedUser.balance };

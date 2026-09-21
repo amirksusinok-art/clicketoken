@@ -9,6 +9,7 @@ import {
   incrementUserNonce,
   addGameHistory,
 } from './db.js';
+import { notifyPvpWin } from './bot.js';
 
 export interface PvpPlayer {
   userId: number;
@@ -213,11 +214,13 @@ class PvpWheelManager {
     match.tieBreak = isTieBreak;
     match.status = 'FINISHED';
 
-    // Credit payout to winner
+    // Credit payout to winner and notify via Telegram push
     if (!match.player1.isBot && match.player1.userId === winnerId) {
       updateUserBalance(match.player1.userId, match.payout);
+      notifyPvpWin(match.player1.userId, match.payout);
     } else if (!match.player2.isBot && match.player2.userId === winnerId) {
       updateUserBalance(match.player2.userId, match.payout);
+      notifyPvpWin(match.player2.userId, match.payout);
     }
 
     // Record in history for human player
