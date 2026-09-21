@@ -36,7 +36,7 @@ interface RoundData {
 }
 
 export const AirplaneGame: React.FC<AirplaneGameProps> = ({ balance, onBalanceUpdate, planeSkin }) => {
-  const [bet, setBet] = useState(5.0);
+  const [bet, setBet] = useState(0.01);
   const [isPlaying, setIsPlaying] = useState(false);
   const [flightPhase, setFlightPhase] = useState<'idle' | 'takeoff' | 'flying' | 'landing' | 'result'>('idle');
   const [displayMultiplier, setDisplayMultiplier] = useState(1.0);
@@ -233,10 +233,13 @@ export const AirplaneGame: React.FC<AirplaneGameProps> = ({ balance, onBalanceUp
 
         {/* Center Flight Status Notification */}
         {flightPhase !== 'idle' && flightPhase !== 'result' && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-xs font-black uppercase tracking-wider text-white pointer-events-none animate-pulse">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-xl bg-black/70 backdrop-blur-md border border-white/10 text-xs font-black uppercase tracking-wider text-white pointer-events-none animate-pulse whitespace-nowrap">
             {flightPhase === 'takeoff' && '🛫 ВЗЛЁТ С ПОЛОСЫ...'}
             {flightPhase === 'flying' && '✈️ СВЕРХЗВУКОВОЙ ПОЛЁТ'}
-            {flightPhase === 'landing' && '🛬 ЗАХОД НА ПОСАДКУ...'}
+            {flightPhase === 'landing' &&
+              (roundData?.landingSuccess
+                ? '🛬 ЗАХОД В ЗЕЛЁНУЮ ЗОНУ (30%)...'
+                : '⚠️ СНОС ВЕТРОМ ВНЕ ПОЛОСЫ (70%)...')}
           </div>
         )}
       </div>
@@ -252,7 +255,9 @@ export const AirplaneGame: React.FC<AirplaneGameProps> = ({ balance, onBalanceUp
         >
           <div className="text-3xl">{payout > 0 ? '🛬 🏆' : '💥 💀'}</div>
           <div className="text-sm font-black uppercase tracking-wider text-white">
-            {payout > 0 ? 'УСПЕШНАЯ ПОСАДКА!' : 'САМОЛЁТ ПОТЕРПЕЛ КРУШЕНИЕ'}
+            {payout > 0
+              ? 'УСПЕШНАЯ ПОСАДКА В ЗОНУ!'
+              : 'САМОЛЁТ НЕ СЕЛ НА ПОЛОСУ (СНОС 70%)'}
           </div>
           <div className="text-xl font-mono font-black text-white">
             {payout > 0 ? (

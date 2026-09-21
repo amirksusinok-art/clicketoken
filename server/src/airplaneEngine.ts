@@ -46,7 +46,7 @@ class AirplaneEngine {
     const user = getUserById(userId);
     if (!user) throw new Error('Пользователь не найден');
 
-    const cleanBet = Math.max(5.0, Math.round(Number(bet || 5.0) * 1000) / 1000);
+    const cleanBet = Math.max(0.01, Math.round(Number(bet || 0.01) * 1000) / 1000);
     if (user.balance < cleanBet) {
       throw new Error('Недостаточно токенов на балансе');
     }
@@ -64,13 +64,11 @@ class AirplaneEngine {
     const fairRes = calculateRandomGameResult(serverSeed, clientSeed, nonce);
     const roll = fairRes.rollPoint; // 0..999999
 
-    // Landing success: ~72% chance of safe landing
-    const landingSuccess = roll % 100 < 72;
+    // Landing success: exactly 30% chance of safe touchdown on runway (70% crash)
+    const landingSuccess = roll % 100 < 30;
 
-    // Generate 4 flight events (mix of rings and rockets)
-    // Ring increases multiplier by 1.5
-    // Rocket divides multiplier by 1.5, floor at 1.00
-    let currentMultiplier = 1.0;
+    // Generate 4 flight events (rings and speed boosts)
+    let currentMultiplier = 1.2;
     const obstacles: FlightObstacle[] = [];
 
     // Obstacle 1 at ~2.5s (mostly ring)

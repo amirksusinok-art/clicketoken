@@ -194,7 +194,12 @@ export const Coin: React.FC<CoinProps> = ({ earnPerClick, onTap, skin = 'default
         }
 
         const id = nextParticleId.current++;
-        const formattedEarn = earnPerClick >= 1 ? `+${earnPerClick}` : `+${earnPerClick.toFixed(3)}`;
+        const formattedEarn =
+          earnPerClick >= 1
+            ? `+${earnPerClick}`
+            : earnPerClick < 0.01
+            ? `+${earnPerClick.toFixed(5)}`
+            : `+${earnPerClick.toFixed(3)}`;
 
         setParticles((prev) => [
           ...prev.slice(-14),

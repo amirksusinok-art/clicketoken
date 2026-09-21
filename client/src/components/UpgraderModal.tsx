@@ -94,7 +94,12 @@ export const UpgraderModal: React.FC<UpgraderModalProps> = ({
                 Текущий доход
               </span>
               <div className="text-xl font-black text-sky-400 mt-0.5">
-                +{profile.earn_per_click >= 1 ? profile.earn_per_click : profile.earn_per_click.toFixed(3)} Токен
+                +{profile.earn_per_click >= 1
+                  ? profile.earn_per_click
+                  : profile.earn_per_click < 0.01
+                  ? profile.earn_per_click.toFixed(5)
+                  : profile.earn_per_click.toFixed(3)}{' '}
+                Токен
               </div>
             </div>
             <div className="text-right">
@@ -120,9 +125,13 @@ export const UpgraderModal: React.FC<UpgraderModalProps> = ({
                 <div>
                   <h3 className="text-sm font-bold text-slate-100">{nextUpgrade.title}</h3>
                   <div className="flex items-center gap-2 mt-1 text-xs text-slate-300">
-                    <span className="text-slate-400">+{profile.earn_per_click}</span>
+                    <span className="text-slate-400">
+                      +{profile.earn_per_click < 0.01 ? profile.earn_per_click.toFixed(5) : profile.earn_per_click}
+                    </span>
                     <ArrowRight className="w-3.5 h-3.5 text-sky-400" />
-                    <span className="font-bold text-emerald-400">+{nextUpgrade.earnPerClick} / тап</span>
+                    <span className="font-bold text-emerald-400">
+                      +{nextUpgrade.earnPerClick < 0.01 ? nextUpgrade.earnPerClick.toFixed(5) : nextUpgrade.earnPerClick} / тап
+                    </span>
                   </div>
                 </div>
                 <div className="text-right">
@@ -194,7 +203,7 @@ export const UpgraderModal: React.FC<UpgraderModalProps> = ({
 
                     <div className="flex items-center gap-3">
                       <span className="font-mono text-[11px] text-sky-400">
-                        +{u.earnPerClick}
+                        +{u.earnPerClick < 0.01 ? u.earnPerClick.toFixed(5) : u.earnPerClick}
                       </span>
                       <span className="font-mono text-[11px] text-slate-400 w-16 text-right">
                         {u.cost === 0 ? 'Бесплатно' : `${formatTokens(u.cost)} Т`}

@@ -139,9 +139,12 @@ export function App() {
           <div className="mt-2 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900/80 border border-white/5 shadow-inner">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-[11px] font-semibold text-slate-300">
-              +{(profile?.earn_per_click ?? 0.001) >= 1
+              +{(profile?.earn_per_click ?? 0.00001) >= 1
                 ? profile?.earn_per_click
-                : (profile?.earn_per_click ?? 0.001).toFixed(3)} за тап
+                : (profile?.earn_per_click ?? 0.00001) < 0.01
+                ? (profile?.earn_per_click ?? 0.00001).toFixed(5)
+                : (profile?.earn_per_click ?? 0.00001).toFixed(3)}{' '}
+              за тап
             </span>
           </div>
 

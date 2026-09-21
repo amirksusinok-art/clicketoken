@@ -10,7 +10,7 @@ interface AnimatedNumberProps {
 
 export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
   value,
-  decimals = 3,
+  decimals,
   className = '',
   durationMs = 350,
 }) => {
@@ -23,7 +23,7 @@ export const AnimatedNumber: React.FC<AnimatedNumberProps> = ({
     const endVal = value;
     prevValueRef.current = value;
 
-    if (Math.abs(startVal - endVal) < 0.0001) {
+    if (Math.abs(startVal - endVal) < 0.000001) {
       setDisplayValue(endVal);
       return;
     }

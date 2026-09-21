@@ -28,7 +28,7 @@ db.exec(`
     username_lower TEXT,
     first_name TEXT,
     balance REAL DEFAULT 0.000,
-    earn_per_click REAL DEFAULT 0.001,
+    earn_per_click REAL DEFAULT 0.00001,
     upgrade_level INTEGER DEFAULT 1,
     client_seed TEXT DEFAULT 'default_client_seed',
     nonce INTEGER DEFAULT 0,
@@ -200,7 +200,7 @@ export function findOrCreateUser(
       const bonus = isPremium ? 5.0 : 1.0;
       db.prepare(`
         INSERT INTO users (id, username, username_lower, first_name, balance, earn_per_click, upgrade_level, client_seed, nonce, referred_by, created_at, last_click_at)
-        VALUES (?, ?, ?, ?, ?, 0.001, 1, 'client_seed_' || ?, 0, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, 0.00001, 1, 'client_seed_' || ?, 0, ?, ?, ?)
       `).run(id, username || null, username_lower, first_name, bonus, id, referrerId, now, now);
 
       // Reward referrer immediately with welcome bonus
@@ -218,7 +218,7 @@ export function findOrCreateUser(
 
   db.prepare(`
     INSERT INTO users (id, username, username_lower, first_name, balance, earn_per_click, upgrade_level, client_seed, nonce, created_at, last_click_at)
-    VALUES (?, ?, ?, ?, 0.000, 0.001, 1, 'client_seed_' || ?, 0, ?, ?)
+    VALUES (?, ?, ?, ?, 0.000, 0.00001, 1, 'client_seed_' || ?, 0, ?, ?)
   `).run(id, username || null, username_lower, first_name, id, now, now);
 
   return db.prepare('SELECT * FROM users WHERE id = ?').get(id) as unknown as UserRow;
