@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Gamepad2, Users, Zap, ShieldCheck, AlertCircle, Cpu, Gift, Palette } from 'lucide-react';
+import { Gamepad2, Users, Zap, ShieldCheck, AlertCircle, Cpu, Gift, Palette, Vault, Flame } from 'lucide-react';
 import { Header } from './components/Header.js';
 import { Coin } from './components/Coin.js';
 import { UpgraderModal } from './components/UpgraderModal.js';
@@ -11,6 +11,9 @@ import { FriendsModal } from './components/friends/FriendsModal.js';
 import { FarmingModal } from './components/farming/FarmingModal.js';
 import { ReferralsModal } from './components/referrals/ReferralsModal.js';
 import { ShopModal } from './components/shop/ShopModal.js';
+import { AdminModal } from './components/admin/AdminModal.js';
+import { StakingModal } from './components/staking/StakingModal.js';
+import { DailyStreakModal } from './components/daily/DailyStreakModal.js';
 import { AnimatedNumber } from './components/AnimatedNumber.js';
 import { useClicker } from './hooks/useClicker.js';
 
@@ -40,6 +43,9 @@ export function App() {
   const [isFarmingOpen, setIsFarmingOpen] = useState(false);
   const [isReferralsOpen, setIsReferralsOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isStakingOpen, setIsStakingOpen] = useState(false);
+  const [isDailyOpen, setIsDailyOpen] = useState(false);
   const [prefillRecipient, setPrefillRecipient] = useState<string | undefined>(undefined);
 
   const openUpgrader = () => {
@@ -60,6 +66,21 @@ export function App() {
   const openShop = () => {
     flushClicks();
     setIsShopOpen(true);
+  };
+
+  const openAdmin = () => {
+    flushClicks();
+    setIsAdminOpen(true);
+  };
+
+  const openStaking = () => {
+    flushClicks();
+    setIsStakingOpen(true);
+  };
+
+  const openDaily = () => {
+    flushClicks();
+    setIsDailyOpen(true);
   };
 
   const openGames = () => {
@@ -110,6 +131,7 @@ export function App() {
         profile={profile}
         onOpenProvablyFair={openFair}
         onOpenProfile={openMyProfile}
+        onOpenAdmin={openAdmin}
       />
 
       {error && (
@@ -148,8 +170,47 @@ export function App() {
             </span>
           </div>
 
-          {/* Quick Action Systems: Farming, Referrals 2.0, Skins */}
-          <div className="w-full flex items-center justify-center gap-2 mt-2.5">
+          {/* Featured Quick Actions: Staking Vault & 7-Day Streak */}
+          <div className="w-full grid grid-cols-2 gap-2 mt-2.5">
+            <button
+              onClick={openStaking}
+              className="py-2 px-3 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-teal-950/60 to-slate-900 border border-emerald-500/40 hover:border-emerald-400 flex items-center justify-between transition active:scale-95 cursor-pointer shadow-lg shadow-emerald-950/40 group"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition">
+                  <Vault className="w-4 h-4" />
+                </div>
+                <div className="text-left">
+                  <div className="text-[11px] font-black text-white leading-tight">Сейф</div>
+                  <div className="text-[9px] text-emerald-400/80 font-semibold">Стейкинг</div>
+                </div>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-lg font-mono font-bold border border-emerald-500/30">
+                +30%
+              </span>
+            </button>
+
+            <button
+              onClick={openDaily}
+              className="py-2 px-3 rounded-2xl bg-gradient-to-r from-amber-950/80 via-orange-950/60 to-slate-900 border border-amber-500/40 hover:border-amber-400 flex items-center justify-between transition active:scale-95 cursor-pointer shadow-lg shadow-amber-950/40 group"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:scale-105 transition">
+                  <Flame className="w-4 h-4 animate-bounce" />
+                </div>
+                <div className="text-left">
+                  <div className="text-[11px] font-black text-white leading-tight">7 Дней</div>
+                  <div className="text-[9px] text-amber-400/80 font-semibold">Стрик наград</div>
+                </div>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/20 text-amber-300 rounded-lg font-mono font-bold border border-amber-500/30">
+                {(profile?.daily_streak ?? 0) > 0 ? `${profile?.daily_streak}д 🔥` : 'Бонус'}
+              </span>
+            </button>
+          </div>
+
+          {/* Secondary Quick Action Systems: Farming, Referrals 2.0, Skins */}
+          <div className="w-full flex items-center justify-center gap-2 mt-2">
             <button
               onClick={openFarming}
               className="flex-1 py-1.5 px-2 rounded-xl bg-gradient-to-r from-emerald-950/60 to-slate-900 border border-emerald-500/30 hover:border-emerald-400 flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer shadow-md group"
@@ -341,6 +402,30 @@ export function App() {
                 }
               : null
           );
+        }}
+      />
+
+      <AdminModal
+        isOpen={isAdminOpen}
+        onClose={() => setIsAdminOpen(false)}
+        myUserId={profile?.id || 5394575689}
+        currentBalance={displayBalance}
+        onBalanceUpdate={(newBal) => updateBalanceDirectly(newBal)}
+      />
+
+      <StakingModal
+        isOpen={isStakingOpen}
+        onClose={() => setIsStakingOpen(false)}
+        balance={displayBalance}
+        onBalanceUpdate={(newBal) => updateBalanceDirectly(newBal)}
+      />
+
+      <DailyStreakModal
+        isOpen={isDailyOpen}
+        onClose={() => setIsDailyOpen(false)}
+        onBalanceUpdate={(newBal) => {
+          updateBalanceDirectly(newBal);
+          setProfile((prev) => (prev ? { ...prev, daily_streak: (prev.daily_streak || 0) + 1 } : null));
         }}
       />
     </div>

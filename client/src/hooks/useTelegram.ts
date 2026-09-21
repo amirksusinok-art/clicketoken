@@ -44,6 +44,16 @@ export function useTelegram() {
     [tg]
   );
 
+  const hapticSelectionChanged = useCallback(() => {
+    if (tg?.HapticFeedback?.selectionChanged) {
+      try {
+        tg.HapticFeedback.selectionChanged();
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [tg]);
+
   const openTelegramLink = useCallback(
     (url: string) => {
       if (tg?.openTelegramLink) {
@@ -63,6 +73,7 @@ export function useTelegram() {
     user,
     hapticImpact,
     hapticNotification,
+    hapticSelectionChanged,
     openTelegramLink,
   };
 }

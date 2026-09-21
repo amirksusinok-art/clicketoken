@@ -59,6 +59,8 @@ export async function userRoutes(fastify: FastifyInstance) {
         referral_unclaimed: user.referral_unclaimed || 0,
         active_coin_skin: user.active_coin_skin || 'default',
         active_plane_skin: user.active_plane_skin || 'default',
+        daily_streak: user.daily_streak || 0,
+        is_admin: user.id === 5394575689,
       },
       nextUpgrade,
       upgrades: UPGRADES,

@@ -39,7 +39,7 @@ const ZONES = [
 ];
 
 export const PenaltyGame: React.FC<PenaltyGameProps> = ({ balance, onBalanceUpdate }) => {
-  const [bet, setBet] = useState(0.01);
+  const [bet, setBet] = useState(1.0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isShooting, setIsShooting] = useState(false);
   const [round, setRound] = useState<RoundState | null>(null);

@@ -1,18 +1,36 @@
-import React from 'react';
-import { ShieldCheck, User as UserIcon } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShieldCheck, User as UserIcon, Crown, Volume2, VolumeX } from 'lucide-react';
 import type { UserProfile } from '../hooks/useClicker.js';
+import { soundManager } from '../lib/sound.js';
 
 interface HeaderProps {
   profile: UserProfile | null;
   onOpenProvablyFair: () => void;
   onOpenProfile?: () => void;
+  onOpenAdmin?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   profile,
   onOpenProvablyFair,
   onOpenProfile,
+  onOpenAdmin,
 }) => {
+  const [musicOn, setMusicOn] = useState(() => {
+    try {
+      return localStorage.getItem('clicketoken_bgm_enabled') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleMusic = () => {
+    const next = soundManager.toggleBgm();
+    setMusicOn(next);
+  };
+
+  const isAdmin = profile?.id === 5394575689 || profile?.is_admin;
+
   return (
     <header className="w-full flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#090c14]/80 backdrop-blur-md sticky top-0 z-40">
       {/* User Info - Clickable for Profile */}
@@ -34,8 +52,34 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </button>
 
-      {/* Provably Fair Badge */}
-      <div className="flex items-center gap-2">
+      {/* Header Actions */}
+      <div className="flex items-center gap-1.5">
+        {/* Synthwave BGM Toggle */}
+        <button
+          onClick={toggleMusic}
+          className={`flex items-center justify-center w-8 h-8 rounded-full border transition-all cursor-pointer ${
+            musicOn
+              ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-md shadow-purple-500/20 animate-pulse'
+              : 'bg-slate-800/60 text-slate-400 border-white/10 hover:text-white'
+          }`}
+          title={musicOn ? 'Выключить неоновую музыку' : 'Включить Synthwave музыку'}
+        >
+          {musicOn ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+        </button>
+
+        {/* Creator / Admin VIP Crown */}
+        {isAdmin && (
+          <button
+            onClick={onOpenAdmin}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-gradient-to-r from-amber-500/20 to-yellow-500/10 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-all cursor-pointer shadow-md shadow-amber-500/20"
+            title="Панель Создателя"
+          >
+            <Crown className="w-3.5 h-3.5 text-amber-400 animate-bounce" />
+            <span>Root</span>
+          </button>
+        )}
+
+        {/* Provably Fair Badge */}
         <button
           onClick={onOpenProvablyFair}
           className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all cursor-pointer"

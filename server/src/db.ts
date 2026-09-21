@@ -103,6 +103,20 @@ db.exec(`
     created_at INTEGER NOT NULL,
     PRIMARY KEY(user_id, skin_id)
   );
+
+  CREATE TABLE IF NOT EXISTS staking_deposits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    amount REAL NOT NULL,
+    term_days INTEGER NOT NULL,
+    interest_percent REAL NOT NULL,
+    start_time INTEGER NOT NULL,
+    end_time INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_staking_user ON staking_deposits(user_id, status);
 `);
 
 // Dynamic safe migrations
@@ -120,6 +134,8 @@ safeAddCol(`ALTER TABLE users ADD COLUMN referred_by INTEGER DEFAULT NULL;`);
 safeAddCol(`ALTER TABLE users ADD COLUMN active_coin_skin TEXT DEFAULT 'default';`);
 safeAddCol(`ALTER TABLE users ADD COLUMN active_plane_skin TEXT DEFAULT 'default';`);
 safeAddCol(`ALTER TABLE users ADD COLUMN last_storage_notified_at INTEGER DEFAULT 0;`);
+safeAddCol(`ALTER TABLE users ADD COLUMN daily_streak INTEGER DEFAULT 0;`);
+safeAddCol(`ALTER TABLE users ADD COLUMN last_daily_claim_at INTEGER DEFAULT 0;`);
 
 export interface UserRow {
   id: number;
@@ -139,6 +155,8 @@ export interface UserRow {
   active_coin_skin?: string;
   active_plane_skin?: string;
   last_storage_notified_at?: number;
+  daily_streak?: number;
+  last_daily_claim_at?: number;
   created_at: number;
   last_click_at: number;
 }
@@ -803,4 +821,292 @@ export function grantSkin(userId: number, skinId: string, skinType: 'coin' | 'pl
     db.prepare('UPDATE users SET active_plane_skin = ? WHERE id = ?').run(skinId, userId);
   }
   return true;
+}
+
+// ----------------------------------------------------
+// Staking Vault
+// ----------------------------------------------------
+
+export interface StakingDepositRow {
+  id: number;
+  user_id: number;
+  amount: number;
+  term_days: number;
+  interest_percent: number;
+  start_time: number;
+  end_time: number;
+  status: 'active' | 'completed' | 'early_withdrawn';
+  created_at: number;
+}
+
+export const STAKING_PLANS: Record<number, number> = {
+  7: 5,    // 7 days -> +5%
+  14: 12,  // 14 days -> +12%
+  30: 30,  // 30 days -> +30%
+};
+
+export function createStakingDeposit(userId: number, amount: number, termDays: number) {
+  const roundedAmount = Math.round(amount * 10000) / 10000;
+  if (isNaN(roundedAmount) || roundedAmount < 1.0) {
+    return { success: false, error: 'Минимальный депозит: 1.0 T' };
+  }
+
+  const interestPercent = STAKING_PLANS[termDays];
+  if (!interestPercent) {
+    return { success: false, error: 'Недопустимый срок депозита (доступно: 7, 14, 30 дней)' };
+  }
+
+  const user = getUserById(userId);
+  if (!user) return { success: false, error: 'Пользователь не найден' };
+
+  if (user.balance < roundedAmount) {
+    return { success: false, error: 'Недостаточно средств на балансе' };
+  }
+
+  const now = Date.now();
+  const endTime = now + termDays * 24 * 60 * 60 * 1000;
+
+  // Deduct balance
+  db.prepare('UPDATE users SET balance = ROUND(balance - ?, 4) WHERE id = ?').run(roundedAmount, userId);
+
+  // Create deposit record
+  const result = db.prepare(`
+    INSERT INTO staking_deposits (user_id, amount, term_days, interest_percent, start_time, end_time, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, 'active', ?)
+  `).run(userId, roundedAmount, termDays, interestPercent, now, endTime, now);
+
+  const updatedUser = getUserById(userId)!;
+  return {
+    success: true,
+    depositId: Number(result.lastInsertRowid),
+    newBalance: updatedUser.balance,
+  };
+}
+
+export function getUserStakingDeposits(userId: number) {
+  const deposits = db.prepare(`
+    SELECT * FROM staking_deposits
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+  `).all(userId) as unknown as StakingDepositRow[];
+
+  const now = Date.now();
+  return deposits.map((d) => {
+    const profit = Math.round((d.amount * (d.interest_percent / 100)) * 10000) / 10000;
+    const isMatured = now >= d.end_time;
+    const remainingMs = Math.max(0, d.end_time - now);
+    return {
+      ...d,
+      profit,
+      totalPayout: Math.round((d.amount + profit) * 10000) / 10000,
+      isMatured,
+      remainingMs,
+    };
+  });
+}
+
+export function claimStakingDeposit(userId: number, depositId: number) {
+  const deposit = db.prepare(`
+    SELECT * FROM staking_deposits WHERE id = ? AND user_id = ?
+  `).get(depositId, userId) as unknown as StakingDepositRow | undefined;
+
+  if (!deposit) {
+    return { success: false, error: 'Депозит не найден' };
+  }
+
+  if (deposit.status !== 'active') {
+    return { success: false, error: 'Депозит уже закрыт' };
+  }
+
+  const now = Date.now();
+  if (now < deposit.end_time) {
+    return { success: false, error: 'Срок депозита ещё не истёк' };
+  }
+
+  const profit = Math.round((deposit.amount * (deposit.interest_percent / 100)) * 10000) / 10000;
+  const totalPayout = Math.round((deposit.amount + profit) * 10000) / 10000;
+
+  db.prepare(`UPDATE staking_deposits SET status = 'completed' WHERE id = ?`).run(depositId);
+  db.prepare(`UPDATE users SET balance = ROUND(balance + ?, 4) WHERE id = ?`).run(totalPayout, userId);
+
+  const updatedUser = getUserById(userId)!;
+  return {
+    success: true,
+    payout: totalPayout,
+    profit,
+    newBalance: updatedUser.balance,
+  };
+}
+
+export function withdrawStakingDepositEarly(userId: number, depositId: number) {
+  const deposit = db.prepare(`
+    SELECT * FROM staking_deposits WHERE id = ? AND user_id = ?
+  `).get(depositId, userId) as unknown as StakingDepositRow | undefined;
+
+  if (!deposit) {
+    return { success: false, error: 'Депозит не найден' };
+  }
+
+  if (deposit.status !== 'active') {
+    return { success: false, error: 'Депозит уже закрыт' };
+  }
+
+  // Early withdrawal: return principal only, 0% profit
+  db.prepare(`UPDATE staking_deposits SET status = 'early_withdrawn' WHERE id = ?`).run(depositId);
+  db.prepare(`UPDATE users SET balance = ROUND(balance + ?, 4) WHERE id = ?`).run(deposit.amount, userId);
+
+  const updatedUser = getUserById(userId)!;
+  return {
+    success: true,
+    returnedPrincipal: deposit.amount,
+    newBalance: updatedUser.balance,
+  };
+}
+
+// ----------------------------------------------------
+// Daily Streak Rewards (7 Days)
+// ----------------------------------------------------
+
+export const DAILY_STREAK_REWARDS = [0.1, 0.25, 0.5, 1.0, 2.0, 3.5, 5.0];
+
+export function getDailyStreakState(userId: number) {
+  const user = getUserById(userId);
+  if (!user) return null;
+
+  const now = Date.now();
+  const lastClaim = user.last_daily_claim_at || 0;
+  const currentStreak = user.daily_streak || 0;
+
+  // Window: can claim after 20 hours. If more than 48 hours passed, streak resets to 0.
+  const elapsed = now - lastClaim;
+  const CLAIM_COOLDOWN_MS = 20 * 60 * 60 * 1000; // 20 hours
+  const STREAK_RESET_MS = 48 * 60 * 60 * 1000;    // 48 hours
+
+  let effectiveStreak = currentStreak;
+  let canClaim = false;
+  let remainingMs = 0;
+
+  if (lastClaim === 0) {
+    canClaim = true;
+    effectiveStreak = 0;
+  } else if (elapsed > STREAK_RESET_MS) {
+    // Streak broken
+    effectiveStreak = 0;
+    canClaim = true;
+  } else if (elapsed >= CLAIM_COOLDOWN_MS) {
+    canClaim = true;
+  } else {
+    canClaim = false;
+    remainingMs = CLAIM_COOLDOWN_MS - elapsed;
+  }
+
+  // Next reward index (1 to 7)
+  const nextRewardDay = (effectiveStreak % 7) + 1;
+
+  return {
+    streak: effectiveStreak,
+    canClaim,
+    remainingMs,
+    nextRewardDay,
+    nextRewardAmount: DAILY_STREAK_REWARDS[nextRewardDay - 1],
+    rewards: DAILY_STREAK_REWARDS,
+  };
+}
+
+export function claimDailyReward(userId: number) {
+  const state = getDailyStreakState(userId);
+  if (!state) return { success: false, error: 'Пользователь не найден' };
+
+  if (!state.canClaim) {
+    const hours = Math.ceil(state.remainingMs / (1000 * 60 * 60));
+    return { success: false, error: `Награда будет доступна через ${hours} ч.` };
+  }
+
+  const rewardAmount = state.nextRewardAmount;
+  const newStreak = state.streak + 1;
+  const now = Date.now();
+
+  db.prepare(`
+    UPDATE users
+    SET balance = ROUND(balance + ?, 4),
+        daily_streak = ?,
+        last_daily_claim_at = ?
+    WHERE id = ?
+  `).run(rewardAmount, newStreak, now, userId);
+
+  const updatedUser = getUserById(userId)!;
+  return {
+    success: true,
+    rewardAmount,
+    newStreak,
+    newBalance: updatedUser.balance,
+    dayClaimed: state.nextRewardDay,
+  };
+}
+
+// ----------------------------------------------------
+// Admin Operations (Exclusive for ID 5394575689)
+// ----------------------------------------------------
+
+export const ADMIN_TELEGRAM_ID = 5394575689;
+
+export function isAdminUser(userId: number): boolean {
+  return userId === ADMIN_TELEGRAM_ID;
+}
+
+export function findUserByQuery(query: string | number): UserRow | null {
+  const clean = String(query).trim().replace(/^@/, '');
+  if (!clean) return null;
+
+  const numericId = Number(clean);
+  if (!isNaN(numericId) && numericId > 0) {
+    const byId = db.prepare('SELECT * FROM users WHERE id = ?').get(numericId) as unknown as UserRow | undefined;
+    if (byId) return byId;
+  }
+
+  const byUsername = db.prepare('SELECT * FROM users WHERE username_lower = ?').get(clean.toLowerCase()) as unknown as UserRow | undefined;
+  return byUsername || null;
+}
+
+export function adminAddBalance(targetUserId: number, amount: number) {
+  const user = getUserById(targetUserId);
+  if (!user) return { success: false, error: 'Пользователь не найден' };
+
+  const rounded = Math.round(amount * 10000) / 10000;
+  db.prepare('UPDATE users SET balance = ROUND(balance + ?, 4) WHERE id = ?').run(rounded, targetUserId);
+  const updated = getUserById(targetUserId)!;
+  return { success: true, user: updated };
+}
+
+export function adminSetBalance(targetUserId: number, newBalance: number) {
+  const user = getUserById(targetUserId);
+  if (!user) return { success: false, error: 'Пользователь не найден' };
+
+  const rounded = Math.max(0, Math.round(newBalance * 10000) / 10000);
+  db.prepare('UPDATE users SET balance = ? WHERE id = ?').run(rounded, targetUserId);
+  const updated = getUserById(targetUserId)!;
+  return { success: true, user: updated };
+}
+
+export function adminGetStats() {
+  const usersCount = (db.prepare('SELECT COUNT(*) as c FROM users').get() as any)?.c || 0;
+  const totalBalance = (db.prepare('SELECT SUM(balance) as s FROM users').get() as any)?.s || 0;
+  
+  const activeStaking = (db.prepare(`
+    SELECT COUNT(*) as count, SUM(amount) as volume
+    FROM staking_deposits
+    WHERE status = 'active'
+  `).get() as any) || { count: 0, volume: 0 };
+
+  const gamesCount = (db.prepare('SELECT COUNT(*) as c FROM game_history').get() as any)?.c || 0;
+  const transfersCount = (db.prepare('SELECT COUNT(*) as c FROM transfers').get() as any)?.c || 0;
+
+  return {
+    totalUsers: usersCount,
+    totalBalance: Math.round(totalBalance * 10000) / 10000,
+    activeStakingDeposits: activeStaking.count || 0,
+    activeStakingVolume: Math.round((activeStaking.volume || 0) * 10000) / 10000,
+    totalGamesPlayed: gamesCount,
+    totalTransfers: transfersCount,
+  };
 }

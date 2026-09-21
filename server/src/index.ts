@@ -11,6 +11,9 @@ import { transfersRoutes } from './routes/transfers.js';
 import { farmingRoutes } from './routes/farming.js';
 import { referralsRoutes } from './routes/referrals.js';
 import { shopRoutes } from './routes/shop.js';
+import { stakingRoutes } from './routes/staking.js';
+import { dailyRoutes } from './routes/daily.js';
+import { adminRoutes } from './routes/admin.js';
 import { setupTelegramBot } from './bot.js';
 
 dotenv.config();
@@ -50,6 +53,9 @@ await fastify.register(transfersRoutes, { prefix: '/api/transfers' });
 await fastify.register(farmingRoutes, { prefix: '/api/farming' });
 await fastify.register(referralsRoutes, { prefix: '/api/referrals' });
 await fastify.register(shopRoutes, { prefix: '/api/shop' });
+await fastify.register(stakingRoutes, { prefix: '/api/staking' });
+await fastify.register(dailyRoutes, { prefix: '/api/daily' });
+await fastify.register(adminRoutes, { prefix: '/api/admin' });
 
 // Health check
 fastify.get('/health', async () => {

@@ -14,35 +14,35 @@ export const BetControls: React.FC<BetControlsProps> = ({
   balance,
   disabled = false,
 }) => {
-  const minBet = 0.01;
+  const minBet = 1.0;
 
   const handleSetBet = (val: number) => {
     if (disabled) return;
-    const clamped = Math.max(minBet, Math.min(balance, Math.round(val * 100000) / 100000));
+    const clamped = Math.max(minBet, Math.min(balance, Math.round(val * 100) / 100));
     onBetChange(clamped);
   };
 
   const handleDivide = () => {
     if (disabled) return;
-    const halved = Math.max(minBet, Math.round((bet / 2) * 100000) / 100000);
+    const halved = Math.max(minBet, Math.round((bet / 2) * 100) / 100);
     onBetChange(halved);
   };
 
   const handleMultiply = () => {
     if (disabled) return;
-    const doubled = Math.min(balance, Math.round(bet * 2 * 100000) / 100000);
+    const doubled = Math.min(balance, Math.round(bet * 2 * 100) / 100);
     onBetChange(Math.max(minBet, doubled));
   };
 
   const handleMax = () => {
     if (disabled) return;
-    onBetChange(Math.max(minBet, Math.round(balance * 100000) / 100000));
+    onBetChange(Math.max(minBet, Math.round(balance * 100) / 100));
   };
 
   return (
     <div className="space-y-2.5">
       <div className="flex items-center justify-between text-xs text-slate-400">
-        <span className="font-semibold">Размер ставки (мин. 0.01 Т)</span>
+        <span className="font-semibold">Размер ставки (мин. 1.0 Т)</span>
         <span className="font-mono">
           Баланс: <strong className="text-sky-400">{formatTokens(balance)}</strong> Т
         </span>
@@ -55,7 +55,7 @@ export const BetControls: React.FC<BetControlsProps> = ({
             type="number"
             min={minBet}
             max={balance}
-            step="0.01"
+            step="1"
             disabled={disabled}
             value={bet || ''}
             onChange={(e) => {
@@ -95,9 +95,9 @@ export const BetControls: React.FC<BetControlsProps> = ({
         </button>
       </div>
 
-      {/* Quick selection pills: 0.01 / 0.05 / 0.1 / 0.5 / 1 / 5 */}
+      {/* Quick selection pills: 1 / 5 / 10 / 25 / 50 / 100 */}
       <div className="flex gap-1.5">
-        {[0.01, 0.05, 0.1, 0.5, 1, 5].map((val) => (
+        {[1, 5, 10, 25, 50, 100].map((val) => (
           <button
             key={val}
             type="button"

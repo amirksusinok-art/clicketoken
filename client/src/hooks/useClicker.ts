@@ -16,6 +16,8 @@ export interface UserProfile {
   referral_unclaimed?: number;
   active_coin_skin?: string;
   active_plane_skin?: string;
+  daily_streak?: number;
+  is_admin?: boolean;
 }
 
 export interface UpgradeConfig {
