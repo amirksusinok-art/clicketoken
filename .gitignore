@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build artifacts
+client/dist/
+server/dist/
+
+# Local databases and runtime data
+server/data/
+*.db
+*.db-wal
+*.db-shm
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# System & Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

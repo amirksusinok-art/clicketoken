@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --bg-color: #0a0d14;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-color);
+  color: #f1f5f9;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0d14;
+}
+::-webkit-scrollbar-thumb {
+  background: #1f2737;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* 3D Coin effects */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.coin-container {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.metal-reflection {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(0, 0, 0, 0.2) 60%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+}
+
+.coin-gold-edge {
+  box-shadow: 
+    0 0 0 3px #b45309,
+    0 0 0 6px #78350f,
+    0 10px 25px -5px rgba(245, 158, 11, 0.3),
+    inset 0 0 20px rgba(0, 0, 0, 0.6);
+}
+
+.coin-platinum-edge {
+  box-shadow: 
+    0 0 0 3px #94a3b8,
+    0 0 0 6px #475569,
+    0 15px 35px -5px rgba(56, 189, 248, 0.25),
+    inset 0 0 25px rgba(0, 0, 0, 0.7);
+}
+
+/* Glassmorphism cards */
+.glass-panel {
+  background: rgba(18, 23, 34, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel-interactive {
+  background: rgba(18, 23, 34, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.2s ease;
+}
+.glass-panel-interactive:hover {
+  background: rgba(26, 34, 50, 0.9);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+/* Tap particle animation */
+@keyframes floatUpFade {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(0.8);
+  }
+  50% {
+    transform: translate(-50%, -35px) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -70px) scale(0.9);
+  }
+}
+
+.floating-particle {
+  position: absolute;
+  pointer-events: none;
+  font-weight: 700;
+  animation: floatUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
